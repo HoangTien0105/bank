@@ -3,9 +3,15 @@ package com.bank.sv.impl;
 import com.bank.constant.Message;
 import com.bank.dto.CustomerDto;
 import com.bank.dto.PaginDto;
+import com.bank.dto.request.CustomerAccountRequestDto;
+import com.bank.enums.AccountStatus;
+import com.bank.enums.AccountType;
+import com.bank.model.Account;
 import com.bank.model.Customer;
 import com.bank.model.CustomerType;
+import com.bank.repository.AccountRepository;
 import com.bank.repository.CustomerRepository;
+import com.bank.repository.CustomerTypeRepository;
 import com.bank.sv.CustomerService;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
@@ -13,12 +19,18 @@ import jakarta.persistence.criteria.CriteriaBuilder;
 import jakarta.persistence.criteria.CriteriaQuery;
 import jakarta.persistence.criteria.Predicate;
 import jakarta.persistence.criteria.Root;
+import jakarta.validation.ValidationException;
+import org.hibernate.ObjectNotFoundException;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.dao.DuplicateKeyException;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
+import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -29,6 +41,15 @@ public class CustomerServiceImpl implements CustomerService {
 
     @Autowired
     private CustomerRepository customerRepository;
+
+    @Autowired
+    private AccountRepository accountRepository;
+
+    @Autowired
+    private CustomerTypeRepository customerTypeRepository;
+
+    @Autowired
+    private PasswordEncoder passwordEncoder;
 
     @PersistenceContext
     private EntityManager entityManager;
@@ -104,5 +125,51 @@ public class CustomerServiceImpl implements CustomerService {
         List<Customer> customerList = customerRepository.findByName(name);
 
         return customerList.stream().map(customer -> CustomerDto.build(customer, customer.getType())).collect(Collectors.toList());
+    }
+
+    @Override
+    @Transactional
+    public void createCustomer(CustomerAccountRequestDto request) {
+        if(!request.getPassword().equals(request.getConfirmPassword())) {
+            throw new ValidationException("Password are not matches");
+        }
+
+        if(customerRepository.existsByEmail(request.getEmail()) != null){
+            throw new DuplicateKeyException("Email already existed");
+        }
+
+        if(customerRepository.existsByCitizenId(request.getCitizenId()) != null){
+            throw new DuplicateKeyException("Citizen ID already existed");
+        }
+
+        if(customerRepository.existsByPhone(request.getPhone()) != null){
+            throw new DuplicateKeyException("Phone already existed");
+        }
+
+        CustomerType customerType = customerTypeRepository.existsByName(request.getCustomerType());
+
+        if(customerType == null)
+            throw new ValidationException("Invalid customer's type");
+
+        Customer customer = Customer.builder()
+                .name(request.getName())
+                .email(request.getEmail())
+                .citizenId(request.getCitizenId())
+                .phone(request.getPhone())
+                .address(request.getAddress())
+                .password(passwordEncoder.encode(request.getPassword()))
+                .type(customerType)
+                .build();
+
+        customerRepository.save(customer);
+
+        Account account = Account.builder()
+                .type(AccountType.CHECKING)
+                .status(AccountStatus.PENDING)
+                .balance(BigDecimal.ZERO)
+                .customer(customer)
+                .build();
+
+        accountRepository.save(account);
     }
 }

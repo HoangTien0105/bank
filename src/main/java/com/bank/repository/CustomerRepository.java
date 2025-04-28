@@ -12,4 +12,13 @@ import java.util.List;
 public interface CustomerRepository extends JpaRepository<Customer, String> {
     @Query("SELECT c FROM Customer c WHERE LOWER(c.name) LIKE LOWER(CONCAT('%', :name, '%'))")
     List<Customer> findByName(@Param("name") String name);
+
+    @Query("SELECT c FROM Customer c WHERE LOWER(c.email) = LOWER(:email)")
+    Customer existsByEmail(@Param("email") String email);
+
+    @Query("SELECT c FROM Customer c WHERE LOWER(c.citizenId) = LOWER(:citizenId)")
+    Customer existsByCitizenId(@Param("citizenId") String citizenId);
+
+    @Query("SELECT c FROM Customer c WHERE LOWER(c.phone) = LOWER(:phone)")
+    Customer existsByPhone(@Param("phone") String phone);
 }

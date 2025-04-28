@@ -2,8 +2,10 @@ package com.bank.ctrl;
 
 import com.bank.dto.CustomerDto;
 import com.bank.dto.PaginDto;
+import com.bank.dto.request.CustomerAccountRequestDto;
 import com.bank.dto.response.ResponseDto;
 import com.bank.sv.CustomerService;
+import com.bank.sv.CustomerTypeService;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -18,6 +20,9 @@ public class CustomerController {
 
     @Autowired
     private CustomerService customerService;
+
+    @Autowired
+    private CustomerTypeService customerTypeService;
 
     @GetMapping
     public ResponseEntity<Object> getCustomers(@RequestParam(value = "offset", defaultValue = "0") String offset,
@@ -43,8 +48,27 @@ public class CustomerController {
     @GetMapping("/name")
     public ResponseEntity<Object> getCustomerByNAme(@RequestParam(value = "name") String name){
         List<CustomerDto> customerList = customerService.getCustomerByName(name);
-
         return ResponseEntity.ok(customerList);
     }
 
+    @PostMapping
+    public ResponseEntity<Object> createCustomerWithAccount(@RequestBody(required = true)CustomerAccountRequestDto request){
+        try{
+            customerService.createCustomer(request);
+        } catch (Exception e){
+            return ResponseEntity.badRequest().body(ResponseDto.builder().success(false).message(e.getMessage()).build());
+        }
+        return ResponseEntity.ok(ResponseDto.builder().success(true).message("Create customer successfully").build());
+    }
+
+
+    @PostMapping("/customerType")
+    public ResponseEntity<Object> createType(@RequestParam(value = "name") String name){
+        try{
+            customerTypeService.createCustomerType(name);
+        } catch (Exception e){
+            return ResponseEntity.ok(ResponseDto.builder().success(false).message(e.getMessage()).build());
+        }
+        return ResponseEntity.ok(ResponseDto.builder().success(true).message("Create customer type successfully").build());
+    }
 }
