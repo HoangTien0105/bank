@@ -6,6 +6,7 @@ import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
 
 import java.util.Date;
+import java.util.Random;
 
 @MappedSuperclass
 @Getter
@@ -23,7 +24,7 @@ public abstract class BaseEntity {
     @PrePersist
     public void prePersistId() {
         if(id == null){
-            id = NanoIdUtils.randomNanoId();
+            id = NanoIdUtils.randomNanoId(new Random(), "0123456789".toCharArray(), 12);
         }
     }
 }
