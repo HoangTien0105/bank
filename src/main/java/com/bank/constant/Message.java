@@ -9,4 +9,7 @@ public interface Message {
     String DUPLICATED_CITIZEN = "Citizen ID already existed";
     String INVALID_PASSWORD = "Passwords are not match";
     String INVALID_CUS_TYPE = "Invalid customer's type";
+
+    String UPDATE_FAIL = "Update failed";
+    String CREATE_FAIL = "Create failed";
 }

@@ -1,13 +1,17 @@
 package com.bank.ctrl;
 
+import com.bank.constant.Message;
 import com.bank.dto.CustomerDto;
 import com.bank.dto.PaginDto;
 import com.bank.dto.request.CustomerAccountRequestDto;
+import com.bank.dto.request.CustomerUpdateRequestDto;
 import com.bank.dto.response.ResponseDto;
 import com.bank.sv.CustomerService;
 import com.bank.sv.CustomerTypeService;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -38,7 +42,7 @@ public class CustomerController {
         return ResponseEntity.ok(result);
     }
 
-    @GetMapping("/{id}")
+    @GetMapping("{id}")
     public ResponseEntity<Object> getCustomerById(@RequestParam(value = "id") String id){
         CustomerDto customer = customerService.getCustomerById(id);
 
@@ -52,13 +56,33 @@ public class CustomerController {
     }
 
     @PostMapping
-    public ResponseEntity<Object> createCustomerWithAccount(@RequestBody(required = true)CustomerAccountRequestDto request){
+    public ResponseEntity<Object> createCustomerWithAccount(@Valid @RequestBody(required = true) CustomerAccountRequestDto request){
         try{
             customerService.createCustomer(request);
         } catch (Exception e){
-            return ResponseEntity.badRequest().body(ResponseDto.builder().success(false).message(e.getMessage()).build());
+            return ResponseEntity.badRequest().body(ResponseDto.builder()
+                    .errorCode(HttpStatus.BAD_REQUEST.value())
+                    .errorDescription(e.getMessage())
+                    .success(false)
+                    .message(Message.CREATE_FAIL)
+                    .build());
         }
         return ResponseEntity.ok(ResponseDto.builder().success(true).message("Create customer successfully").build());
+    }
+
+    @PutMapping("{id}")
+    public ResponseEntity<Object> updateCustomerInfo(@PathVariable String id, @Valid @RequestBody(required = true) CustomerUpdateRequestDto request){
+        try{
+            customerService.updateCustomer(id, request);
+        } catch (Exception e){
+            return ResponseEntity.badRequest().body(ResponseDto.builder()
+                    .errorCode(HttpStatus.BAD_REQUEST.value())
+                    .errorDescription(e.getMessage())
+                    .success(false)
+                    .message(Message.UPDATE_FAIL)
+                    .build());
+        }
+        return ResponseEntity.ok(ResponseDto.builder().success(true).message("Update customer successfully").build());
     }
 
 
