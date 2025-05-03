@@ -12,4 +12,10 @@ public interface Message {
 
     String UPDATE_FAIL = "Update failed";
     String CREATE_FAIL = "Create failed";
+
+    //Validate Account
+    String ACCOUNT_NOT_FOUND = "Account not found!";
+    String INVALID_ACCOUNT_STATUS = "Invalid account status";
+    String ACCOUNT_STATUS_ALREADY_SET = "Account's status is already set";
+
 }

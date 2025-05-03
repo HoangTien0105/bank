@@ -21,7 +21,7 @@ public class AccountStatusHistory {
     @Column(name = "history_id")
     private Long id;
 
-    //Status lưu khi đổi
+    //Status lưu sau khi đổi
     @Column(name = "status", nullable = false)
     @Enumerated(EnumType.STRING)
     private AccountStatus status;

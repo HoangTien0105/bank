@@ -33,7 +33,6 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
 import java.math.BigDecimal;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -178,7 +177,7 @@ public class CustomerServiceImpl implements CustomerService {
 
         Account account = Account.builder()
                 .type(AccountType.CHECKING)
-                .status(AccountStatus.PENDING)
+                .status(AccountStatus.ACTIVE)
                 .balance(BigDecimal.ZERO)
                 .customer(customer)
                 .build();
