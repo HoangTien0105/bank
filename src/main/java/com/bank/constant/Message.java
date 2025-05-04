@@ -18,4 +18,6 @@ public interface Message {
     String INVALID_ACCOUNT_STATUS = "Invalid account status";
     String ACCOUNT_STATUS_ALREADY_SET = "Account's status is already set";
 
+    //Validate transaction
+    String TRANSACTION_NOT_FOUND = "Transaction not found!";
 }
