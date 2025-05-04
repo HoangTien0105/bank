@@ -17,12 +17,7 @@ import com.bank.sv.CustomerService;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import jakarta.persistence.TypedQuery;
-import jakarta.persistence.criteria.CriteriaBuilder;
-import jakarta.persistence.criteria.CriteriaQuery;
-import jakarta.persistence.criteria.Predicate;
-import jakarta.persistence.criteria.Root;
 import jakarta.validation.ValidationException;
-import org.hibernate.ObjectNotFoundException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -67,7 +62,6 @@ public class CustomerServiceImpl implements CustomerService {
         String keyword = pagin.getKeyword();
 
         int pageNumber = offset / limit;
-        Pageable pageable = PageRequest.of(pageNumber, limit);
 
         String jpql = "SELECT c FROM Customer c WHERE " +
                 "(:keyword IS NULL OR " +
@@ -176,7 +170,7 @@ public class CustomerServiceImpl implements CustomerService {
         customerRepository.save(customer);
 
         Account account = Account.builder()
-                .type(AccountType.CHECKING)
+                .type(AccountType.LOW)
                 .status(AccountStatus.ACTIVE)
                 .balance(BigDecimal.ZERO)
                 .customer(customer)

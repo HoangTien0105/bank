@@ -28,7 +28,7 @@ public class Account extends BaseEntity{
     private BigDecimal balance;
 
     @Column(name = "transaction_limit", columnDefinition = "decimal")
-    private BigDecimal transaction_limit;
+    private BigDecimal transactionLimit;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "customer_id", nullable = false)
