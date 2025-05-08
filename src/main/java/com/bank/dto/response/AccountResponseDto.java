@@ -13,6 +13,7 @@ import java.util.Date;
 public class AccountResponseDto {
     private String id;
     private String accountType;
+    private String balanceType;
     private BigDecimal balance;
     private BigDecimal transactionLimit;
     private Date openDate;
@@ -21,6 +22,7 @@ public class AccountResponseDto {
         return builder()
                 .id(account.getId())
                 .accountType(account.getType().toString())
+                .balanceType(account.getBalanceType().toString())
                 .balance(account.getBalance())
                 .transactionLimit(account.getTransactionLimit())
                 .openDate(account.getCreateDate())

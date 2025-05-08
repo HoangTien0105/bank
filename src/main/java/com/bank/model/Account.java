@@ -2,6 +2,7 @@ package com.bank.model;
 
 import com.bank.enums.AccountStatus;
 import com.bank.enums.AccountType;
+import com.bank.enums.BalanceType;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -15,6 +16,10 @@ import java.math.BigDecimal;
 @Entity
 @Table(name = "account")
 public class Account extends BaseEntity{
+
+    @Column(name = "balance_type")
+    @Enumerated(EnumType.STRING)
+    private BalanceType balanceType;
 
     @Column(name = "account_type", nullable = false)
     @Enumerated(EnumType.STRING)

@@ -29,9 +29,6 @@ public class Transaction extends BaseEntity{
     @Column(name = "transaction_date")
     private Date transactionDate;
 
-    @Column(name = "fee", columnDefinition = "decimal")
-    private BigDecimal fee;
-
     @Column(name = "location", nullable = false, length = 100)
     private String location;
 

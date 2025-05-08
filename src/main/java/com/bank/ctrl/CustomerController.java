@@ -8,6 +8,7 @@ import com.bank.dto.request.CustomerUpdateRequestDto;
 import com.bank.dto.response.ResponseDto;
 import com.bank.sv.CustomerService;
 import com.bank.sv.CustomerTypeService;
+import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -55,6 +56,9 @@ public class CustomerController {
         return ResponseEntity.ok(customerList);
     }
 
+    @Operation(
+            summary = "Create customers with accounts"
+    )
     @PostMapping
     public ResponseEntity<Object> createCustomerWithAccount(@Valid @RequestBody(required = true) CustomerAccountRequestDto request){
         try{

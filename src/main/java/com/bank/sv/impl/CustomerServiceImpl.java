@@ -7,6 +7,7 @@ import com.bank.dto.request.CustomerAccountRequestDto;
 import com.bank.dto.request.CustomerUpdateRequestDto;
 import com.bank.enums.AccountStatus;
 import com.bank.enums.AccountType;
+import com.bank.enums.BalanceType;
 import com.bank.model.Account;
 import com.bank.model.Customer;
 import com.bank.model.CustomerType;
@@ -170,7 +171,8 @@ public class CustomerServiceImpl implements CustomerService {
         customerRepository.save(customer);
 
         Account account = Account.builder()
-                .type(AccountType.LOW)
+                .type(AccountType.CHECKING)
+                .balanceType(BalanceType.LOW)
                 .status(AccountStatus.ACTIVE)
                 .balance(BigDecimal.ZERO)
                 .customer(customer)

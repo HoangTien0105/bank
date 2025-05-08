@@ -26,7 +26,6 @@ public class TransactionResponseDto {
                 .type(transaction.getType().toString())
                 .amount(transaction.getAmount())
                 .transactionDate(transaction.getTransactionDate())
-                .fee(transaction.getFee())
                 .location(transaction.getLocation())
                 .description(transaction.getDescription())
                 .createDate(transaction.getCreateDate())
