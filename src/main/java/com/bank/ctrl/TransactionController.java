@@ -1,10 +1,18 @@
 package com.bank.ctrl;
 
+import com.bank.constant.Message;
 import com.bank.dto.PaginDto;
+import com.bank.dto.request.MoneyTransferRequestDto;
+import com.bank.dto.request.MoneyUpdateRequest;
+import com.bank.dto.response.ResponseDto;
 import com.bank.dto.response.TransactionResponseDto;
 import com.bank.sv.TransactionService;
+import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -33,5 +41,53 @@ public class TransactionController {
     public ResponseEntity<Object> getTransactionByID(@PathVariable(value = "id") String id){
         TransactionResponseDto response = transactionService.getTransactionById(id);
         return ResponseEntity.ok(response);
+    }
+
+    @Operation(summary = "Transfer money")
+    @PostMapping(value = "/transfer")
+    public ResponseEntity<Object> transferMoney(@Valid @RequestBody MoneyTransferRequestDto request){
+        try{
+            transactionService.transferMoney(request);
+        } catch (Exception e){
+            return ResponseEntity.badRequest().body(ResponseDto.builder()
+                    .errorCode(HttpStatus.BAD_REQUEST.value())
+                    .errorDescription(e.getMessage())
+                    .success(false)
+                    .message("Transfer money failed")
+                    .build());
+        }
+        return ResponseEntity.ok().body(ResponseDto.builder().success(true).message("Transfer money successfully").build());
+    }
+
+    @Operation(summary = "Deposit money")
+    @PostMapping(value = "/deposit")
+    public ResponseEntity<Object> depositMoney(@Valid @RequestBody MoneyUpdateRequest request){
+        try{
+            transactionService.depositMoney(request);
+        } catch (Exception e){
+            return ResponseEntity.badRequest().body(ResponseDto.builder()
+                    .errorCode(HttpStatus.BAD_REQUEST.value())
+                    .errorDescription(e.getMessage())
+                    .success(false)
+                    .message("Deposit money failed")
+                    .build());
+        }
+        return ResponseEntity.ok().body(ResponseDto.builder().success(true).message("Deposit money successfully").build());
+    }
+
+    @Operation(summary = "Withdraw money")
+    @PostMapping(value = "/withdraw")
+    public ResponseEntity<Object> withdrawMoney(@Valid @RequestBody MoneyUpdateRequest request){
+        try{
+            transactionService.withdrawMoney(request);
+        } catch (Exception e){
+            return ResponseEntity.badRequest().body(ResponseDto.builder()
+                    .errorCode(HttpStatus.BAD_REQUEST.value())
+                    .errorDescription(e.getMessage())
+                    .success(false)
+                    .message("Withdraw money failed")
+                    .build());
+        }
+        return ResponseEntity.ok().body(ResponseDto.builder().success(true).message("Withdraw money successfully").build());
     }
 }

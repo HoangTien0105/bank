@@ -175,6 +175,7 @@ public class CustomerServiceImpl implements CustomerService {
                 .balanceType(BalanceType.LOW)
                 .status(AccountStatus.ACTIVE)
                 .balance(BigDecimal.ZERO)
+                .transactionLimit(BigDecimal.valueOf(5000000))
                 .customer(customer)
                 .build();
 

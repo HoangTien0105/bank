@@ -1,5 +1,8 @@
 package com.bank.constant;
 
+import lombok.Data;
+
+
 public interface Message {
 
     //Validate Customer
@@ -20,4 +23,6 @@ public interface Message {
 
     //Validate transaction
     String TRANSACTION_NOT_FOUND = "Transaction not found!";
+    String TRANSFER_FAILED = "Transfer money failed";
+    String TRANSFER_SUCCESS = "Transfer money successfully";
 }

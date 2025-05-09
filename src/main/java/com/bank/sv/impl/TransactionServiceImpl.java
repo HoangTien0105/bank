@@ -3,9 +3,11 @@ package com.bank.sv.impl;
 import com.bank.constant.Message;
 import com.bank.dto.PaginDto;
 import com.bank.dto.request.MoneyTransferRequestDto;
+import com.bank.dto.request.MoneyUpdateRequest;
 import com.bank.dto.response.TransactionResponseDto;
 import com.bank.enums.AccountStatus;
 import com.bank.enums.AccountType;
+import com.bank.enums.BalanceType;
 import com.bank.enums.TransactionType;
 import com.bank.model.Account;
 import com.bank.model.Transaction;
@@ -18,6 +20,7 @@ import jakarta.persistence.PersistenceContext;
 import jakarta.persistence.TypedQuery;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
 import java.math.BigDecimal;
@@ -110,6 +113,7 @@ public class TransactionServiceImpl implements TransactionService {
     }
 
     @Override
+    @Transactional
     public void transferMoney(MoneyTransferRequestDto request) {
         String fromAccountId = request.getFromAccountId();
         String toAccountId = request.getToAccountId();
@@ -123,6 +127,14 @@ public class TransactionServiceImpl implements TransactionService {
                 .orElseThrow(() -> new RuntimeException("From account does not exists"));
         Account toAccount = accountRepository.findById(toAccountId)
                 .orElseThrow(() -> new RuntimeException("To account does not exists"));
+
+        if(fromAccount.getStatus() != AccountStatus.ACTIVE){
+            throw new RuntimeException("Source account must be active");
+        }
+
+        if(toAccount.getStatus() != AccountStatus.ACTIVE){
+            throw new RuntimeException("Destination account must be active");
+        }
 
 
         if (fromAccount.getType() != AccountType.CHECKING) {
@@ -141,7 +153,7 @@ public class TransactionServiceImpl implements TransactionService {
 
         if (fromAccount.getTransactionLimit() != null &&
                 fromAccount.getTransactionLimit().compareTo(amount) < 0) {
-            throw new RuntimeException("Số tiền vượt quá giới hạn giao dịch của tài khoản");
+            throw new RuntimeException("The amount exceeds the transaction limit of the account.");
         }
 
         //Update balance
@@ -149,10 +161,10 @@ public class TransactionServiceImpl implements TransactionService {
         toAccount.setBalance(toAccount.getBalance().add(amount));
 
         // Update status and transaction limit
-        fromAccount.setStatus(AccountStatus.valueOf(BalanceTypeUtils.validateAccountStatus(fromAccount)));
+        fromAccount.setBalanceType(BalanceType.valueOf(BalanceTypeUtils.validateBalanceStatus(fromAccount)));
         BalanceTypeUtils.setTransactionLimitBasedOnBalance(fromAccount);
 
-        toAccount.setStatus(AccountStatus.valueOf(BalanceTypeUtils.validateAccountStatus(toAccount)));
+        toAccount.setBalanceType(BalanceType.valueOf(BalanceTypeUtils.validateBalanceStatus(toAccount)));
         BalanceTypeUtils.setTransactionLimitBasedOnBalance(toAccount);
 
         if (description == null) {
@@ -183,5 +195,65 @@ public class TransactionServiceImpl implements TransactionService {
         // Save accounts
         accountRepository.save(fromAccount);
         accountRepository.save(toAccount);
+    }
+
+    @Override
+    @Transactional
+    public void depositMoney(MoneyUpdateRequest request) {
+        Account account = accountRepository.findById(request.getAccountId()).orElseThrow(() -> new RuntimeException("Account not found"));
+
+        if(account.getStatus() != AccountStatus.ACTIVE){
+            throw new RuntimeException("Account must be active");
+        }
+
+        BigDecimal amount = BigDecimal.valueOf(request.getAmount());
+
+        account.setBalance(account.getBalance().add(amount));
+
+        account.setBalanceType(BalanceType.valueOf(BalanceTypeUtils.validateBalanceStatus(account)));
+        BalanceTypeUtils.setTransactionLimitBasedOnBalance(account);
+
+        Date transactionDate = Date.from(LocalDateTime.now().atZone(ZoneId.systemDefault()).toInstant());
+
+        Transaction transaction = new Transaction();
+        transaction.setAccount(account);
+        transaction.setTransactionDate(transactionDate);
+        transaction.setAmount(amount);
+        transaction.setType(TransactionType.DEPOSIT);
+        transaction.setLocation(request.getLocation());
+        transaction.setDescription("Deposit money into wallet");
+        transactionRepository.save(transaction);
+    }
+
+    @Override
+    @Transactional
+    public void withdrawMoney(MoneyUpdateRequest request) {
+        Account account = accountRepository.findById(request.getAccountId()).orElseThrow(() -> new RuntimeException("Account not found"));
+
+        if(account.getStatus() != AccountStatus.ACTIVE){
+            throw new RuntimeException("Account must be active");
+        }
+
+        BigDecimal amount = BigDecimal.valueOf(request.getAmount());
+
+        if (account.getBalance().compareTo(amount) < 0) {
+            throw new RuntimeException("Your account balance is not enough");
+        }
+
+        account.setBalance(account.getBalance().subtract(amount));
+
+        account.setBalanceType(BalanceType.valueOf(BalanceTypeUtils.validateBalanceStatus(account)));
+        BalanceTypeUtils.setTransactionLimitBasedOnBalance(account);
+
+        Date transactionDate = Date.from(LocalDateTime.now().atZone(ZoneId.systemDefault()).toInstant());
+
+        Transaction transaction = new Transaction();
+        transaction.setAccount(account);
+        transaction.setTransactionDate(transactionDate);
+        transaction.setAmount(amount);
+        transaction.setType(TransactionType.WITHDRAW);
+        transaction.setLocation(request.getLocation());
+        transaction.setDescription("Withdraw money from wallet");
+        transactionRepository.save(transaction);
     }
 }

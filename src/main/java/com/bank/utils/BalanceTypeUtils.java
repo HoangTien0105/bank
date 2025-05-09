@@ -5,7 +5,7 @@ import com.bank.model.Account;
 import java.math.BigDecimal;
 
 public class BalanceTypeUtils {
-    public static String validateAccountStatus(Account account) {
+    public static String validateBalanceStatus(Account account) {
         BigDecimal balance = account.getBalance();
         BigDecimal fiveMillion = new BigDecimal("5000000"); // 5 triệu
         BigDecimal fiftyMillion = new BigDecimal("50000000"); // 50 triệu
@@ -24,7 +24,7 @@ public class BalanceTypeUtils {
         BigDecimal fiftyMillion = new BigDecimal("50000000"); // 50 triệu
         BigDecimal hundredMillion = new BigDecimal("100000000"); // 100 triệu
 
-        String status = validateAccountStatus(account);
+        String status = validateBalanceStatus(account);
         switch (status) {
             case "LOW":
                 account.setTransactionLimit(fiveMillion);
