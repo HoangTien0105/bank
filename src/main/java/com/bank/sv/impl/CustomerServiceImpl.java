@@ -23,6 +23,7 @@ import jakarta.persistence.TypedQuery;
 import jakarta.validation.ValidationException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DuplicateKeyException;
+import org.springframework.data.domain.Page;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.data.domain.PageRequest;
@@ -31,7 +32,6 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
 import java.math.BigDecimal;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -237,12 +237,44 @@ public class CustomerServiceImpl implements CustomerService {
 
         int pageNumber = offset/limit;
 
-//        List<Customer> customers =  customerRepository.findCustomerByLocation(location);
-//        List<CustomerLocationDto> result = new ArrayList<>();
-//
-//        for(Customer customer: customers){
-//
-//        }
-        return null;
+        //Tạo pageable
+        Pageable pageable = PageRequest.of(pageNumber, limit);
+
+        Page<Object[]> customers =  customerRepository.findCustomerByLocation("%" + location + "%", pageable);
+        List<CustomerLocationDto> result = customers.getContent().stream()
+                .map(row -> {
+
+            // Tạo CustomerLocationDto
+                    String id = row[0].toString();         // c.id (numeric -> String)
+                    String name = (String) row[1];         // c.name
+                    String email = (String) row[2];        // c.email
+                    String citizenId = (String) row[3];    // c.citizen_id
+                    String phone = (String) row[4];        // c.phone
+                    String address = (String) row[5];      // c.address
+                    String customerType = (String) row[6]; // ct.name
+                    String transactionLocation = (String) row[7]; // t.location
+
+                    // Tạo CustomerLocationDto
+                    return CustomerLocationDto.builder()
+                            .id(id)
+                            .name(name)
+                            .email(email)
+                            .citizenId(citizenId)
+                            .phone(phone)
+                            .address(address)
+                            .customerType(customerType)
+                            .location(transactionLocation)
+                            .build();
+                })
+                .collect(Collectors.toList());
+
+        PaginDto<CustomerLocationDto> response = new PaginDto<>();
+        response.setOffset(offset);
+        response.setLimit(limit);
+        response.setTotalPages(customers.getTotalPages());
+        response.setTotalRows(customers.getTotalElements());
+        response.setResults(result);
+
+        return response;
     }
 }

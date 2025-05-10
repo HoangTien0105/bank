@@ -24,10 +24,19 @@ public interface CustomerRepository extends JpaRepository<Customer, String> {
     @Query("SELECT c FROM Customer c WHERE LOWER(c.phone) = LOWER(:phone)")
     Customer existsByPhone(@Param("phone") String phone);
 
-    @Query("SELECT DISTINCT c FROM Customer " +
-           "JOIN Account a on a.customerId = c.id " +
-           "JOIN Transaction t on t.accountId = a.id " +
-           "WHERE t.location LIKE :location " +
-           "ORDER BY t.transaction_date")
-    Page<Customer> findCustomerByLocation(@Param("location") String location, Pageable pageable);
+    @Query(value = "SELECT DISTINCT c.id, c.name, c.email, c.citizen_id, c.phone, c.address," +
+            "ct.name AS customer_type_name, t.location, t.transaction_date " +
+            "FROM customer c " +
+            "INNER JOIN customer_type ct ON c.type_id = ct.id " +
+            "INNER JOIN account a ON c.id = a.customer_id " +
+            "INNER JOIN transaction t ON a.id = t.account_id " +
+            "WHERE t.location LIKE :location " +
+            "ORDER BY t.transaction_date DESC",
+            countQuery = "SELECT COUNT(DISTINCT c.id) " +
+                    "FROM customer c " +
+                    "INNER JOIN account a ON c.id = a.customer_id " +
+                    "INNER JOIN transaction t ON a.id = t.account_id " +
+                    "WHERE t.location LIKE :location",
+            nativeQuery = true)
+    Page<Object[]> findCustomerByLocation(@Param("location") String location, Pageable pageable);
 }

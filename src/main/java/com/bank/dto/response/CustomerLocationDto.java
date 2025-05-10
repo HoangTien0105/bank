@@ -22,8 +22,6 @@ public class CustomerLocationDto {
     private String citizenId;
     private String phone;
     private String address;
-    private String password;
-    private Date createDate;
     private String customerType;
     private String location;
 
@@ -35,7 +33,6 @@ public class CustomerLocationDto {
                 .citizenId(cus.getCitizenId())
                 .phone(cus.getPhone())
                 .address(cus.getAddress())
-                .createDate(cus.getCreateDate())
                 .customerType(cusType.getName())
                 .location(transaction.getLocation())
                 .build();

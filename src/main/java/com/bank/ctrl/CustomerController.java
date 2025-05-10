@@ -5,6 +5,7 @@ import com.bank.dto.CustomerDto;
 import com.bank.dto.PaginDto;
 import com.bank.dto.request.CustomerAccountRequestDto;
 import com.bank.dto.request.CustomerUpdateRequestDto;
+import com.bank.dto.response.CustomerLocationDto;
 import com.bank.dto.response.ResponseDto;
 import com.bank.sv.CustomerService;
 import com.bank.sv.CustomerTypeService;
@@ -33,12 +34,12 @@ public class CustomerController {
     public ResponseEntity<Object> getCustomers(@RequestParam(value = "offset", defaultValue = "0") String offset,
                                                @RequestParam(value = "limit", defaultValue = "10") String limit,
                                                @RequestParam(value = "keyword", required = false) String keyword){
-        PaginDto<CustomerDto> pagin = new PaginDto<>();
-        pagin.setOffset(offset);
-        pagin.setLimit(limit);
-        pagin.setKeyword(keyword);
+        PaginDto<CustomerDto> paginDto = new PaginDto<>();
+        paginDto.setOffset(offset);
+        paginDto.setLimit(limit);
+        paginDto.setKeyword(keyword);
 
-        PaginDto<CustomerDto> result = customerService.getCustomers(pagin);
+        PaginDto<CustomerDto> result = customerService.getCustomers(paginDto);
 
         return ResponseEntity.ok(result);
     }
@@ -107,6 +108,12 @@ public class CustomerController {
     public ResponseEntity<Object> getCustomersByLocation(@RequestParam(value = "offset", defaultValue = "0") String offset,
                                                          @RequestParam(value = "limit", defaultValue = "10") String limit,
                                                          @RequestParam(value = "location") String location){
-        return null;
+        PaginDto<CustomerLocationDto> paginDto = new PaginDto<>();
+        paginDto.setOffset(offset);
+        paginDto.setLimit(limit);
+
+        PaginDto<CustomerLocationDto> result = customerService.getCustomersByLocation(paginDto, location);
+
+        return ResponseEntity.ok(result);
     }
 }
