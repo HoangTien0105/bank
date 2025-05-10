@@ -99,4 +99,14 @@ public class CustomerController {
         }
         return ResponseEntity.ok(ResponseDto.builder().success(true).message("Create customer type successfully").build());
     }
+
+    @Operation(
+            summary = "Get customers by location"
+    )
+    @GetMapping("/place")
+    public ResponseEntity<Object> getCustomersByLocation(@RequestParam(value = "offset", defaultValue = "0") String offset,
+                                                         @RequestParam(value = "limit", defaultValue = "10") String limit,
+                                                         @RequestParam(value = "location") String location){
+        return null;
+    }
 }

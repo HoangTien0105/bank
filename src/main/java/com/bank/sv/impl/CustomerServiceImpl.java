@@ -5,6 +5,7 @@ import com.bank.dto.CustomerDto;
 import com.bank.dto.PaginDto;
 import com.bank.dto.request.CustomerAccountRequestDto;
 import com.bank.dto.request.CustomerUpdateRequestDto;
+import com.bank.dto.response.CustomerLocationDto;
 import com.bank.enums.AccountStatus;
 import com.bank.enums.AccountType;
 import com.bank.enums.BalanceType;
@@ -14,6 +15,7 @@ import com.bank.model.CustomerType;
 import com.bank.repository.AccountRepository;
 import com.bank.repository.CustomerRepository;
 import com.bank.repository.CustomerTypeRepository;
+import com.bank.repository.TransactionRepository;
 import com.bank.sv.CustomerService;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
@@ -29,6 +31,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
 import java.math.BigDecimal;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -46,21 +49,24 @@ public class CustomerServiceImpl implements CustomerService {
     private CustomerTypeRepository customerTypeRepository;
 
     @Autowired
+    private TransactionRepository transactionRepository;
+
+    @Autowired
     private PasswordEncoder passwordEncoder;
 
     @PersistenceContext
     private EntityManager entityManager;
 
     @Override
-    public PaginDto<CustomerDto> getCustomers(PaginDto<CustomerDto> pagin) {
+    public PaginDto<CustomerDto> getCustomers(PaginDto<CustomerDto> paginDto) {
 
         // Init các biến bắt đầu và giới hạn phần tử trong trang
 
-        int offset = pagin.getOffset() != null ? pagin.getOffset() : 0;
-        int limit = pagin.getLimit() != null ? pagin.getLimit() : 10;
+        int offset = paginDto.getOffset() != null ? paginDto.getOffset() : 0;
+        int limit = paginDto.getLimit() != null ? paginDto.getLimit() : 10;
 
         //Nếu có filter
-        String keyword = pagin.getKeyword();
+        String keyword = paginDto.getKeyword();
 
         int pageNumber = offset / limit;
 
@@ -111,14 +117,14 @@ public class CustomerServiceImpl implements CustomerService {
                 .map(customer -> CustomerDto.build(customer, customer.getType()))
                 .collect(Collectors.toList());
 
-        pagin.setResults(response);
-        pagin.setOffset(offset);
-        pagin.setLimit(limit);
-        pagin.setPageNumber(pageNumber + 1);
-        pagin.setTotalRows(totalRows);
-        pagin.setTotalPages((int) Math.ceil((double) totalRows / limit));
+        paginDto.setResults(response);
+        paginDto.setOffset(offset);
+        paginDto.setLimit(limit);
+        paginDto.setPageNumber(pageNumber + 1);
+        paginDto.setTotalRows(totalRows);
+        paginDto.setTotalPages((int) Math.ceil((double) totalRows / limit));
 
-        return pagin;
+        return paginDto;
     }
 
     @Override
@@ -222,5 +228,21 @@ public class CustomerServiceImpl implements CustomerService {
         }
 
         customerRepository.save(customer);
+    }
+
+    @Override
+    public PaginDto<CustomerLocationDto> getCustomersByLocation(PaginDto<CustomerLocationDto> paginDto, String location) {
+        int offset = paginDto.getOffset() != null ? paginDto.getOffset() : 0;
+        int limit = paginDto.getLimit() != null ? paginDto.getLimit() : 10;
+
+        int pageNumber = offset/limit;
+
+//        List<Customer> customers =  customerRepository.findCustomerByLocation(location);
+//        List<CustomerLocationDto> result = new ArrayList<>();
+//
+//        for(Customer customer: customers){
+//
+//        }
+        return null;
     }
 }
