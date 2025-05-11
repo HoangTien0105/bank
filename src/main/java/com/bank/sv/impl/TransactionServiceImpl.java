@@ -4,6 +4,7 @@ import com.bank.constant.Message;
 import com.bank.dto.PaginDto;
 import com.bank.dto.request.MoneyTransferRequestDto;
 import com.bank.dto.request.MoneyUpdateRequest;
+import com.bank.dto.response.AccountResponseDto;
 import com.bank.dto.response.TransactionResponseDto;
 import com.bank.enums.AccountStatus;
 import com.bank.enums.AccountType;
@@ -18,7 +19,11 @@ import com.bank.utils.BalanceTypeUtils;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import jakarta.persistence.TypedQuery;
+import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
@@ -28,6 +33,7 @@ import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.Date;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 public class TransactionServiceImpl implements TransactionService {
@@ -104,6 +110,31 @@ public class TransactionServiceImpl implements TransactionService {
         pagin.setTotalPages((int) Math.ceil((double) totalRows / limit));
 
         return pagin;
+    }
+
+    @Override
+    public PaginDto<TransactionResponseDto> getTransactionsOrderByDate(PaginDto<TransactionResponseDto> paginDto) {
+        int offset = paginDto.getOffset() != null ? paginDto.getOffset() : 0;
+        int limit = paginDto.getLimit() != null ? paginDto.getLimit() : 10;
+
+        int pageNumber = offset / limit;
+
+        Pageable pageable = PageRequest.of(pageNumber, limit);
+
+        Page<Transaction> transactions = transactionRepository.findAllTransactionOrderByDate(pageable);
+
+        List<TransactionResponseDto> result = transactions.getContent().stream()
+                .map(TransactionResponseDto::build)
+                .collect(Collectors.toList());
+
+        PaginDto<TransactionResponseDto> response = new PaginDto<>();
+        response.setResults(result);
+        response.setLimit(limit);
+        response.setOffset(offset);
+        response.setTotalPages(transactions.getTotalPages());
+        response.setTotalRows(transactions.getTotalElements());
+
+        return response;
     }
 
     @Override

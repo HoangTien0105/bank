@@ -15,15 +15,18 @@ import jakarta.persistence.PersistenceContext;
 import jakarta.persistence.TypedQuery;
 import jakarta.validation.ValidationException;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 @Service
 public class AccountServiceImpl implements AccountService {
@@ -140,5 +143,30 @@ public class AccountServiceImpl implements AccountService {
     public AccountResponseDto getAccountById(String id) {
         Account account = accountRepository.findById(id).orElseThrow(() -> new RuntimeException(Message.ACCOUNT_NOT_FOUND));
         return AccountResponseDto.build(account);
+    }
+
+    @Override
+    public PaginDto<AccountResponseDto> getAccountsGroupByType(PaginDto<AccountResponseDto> paginDto) {
+        int offset = paginDto.getOffset() != null ? paginDto.getOffset() : 0;
+        int limit = paginDto.getLimit() != null ? paginDto.getLimit() : 10;
+
+        int pageNumber = offset / limit;
+
+        Pageable pageable = PageRequest.of(pageNumber, limit);
+
+        Page<Account> accounts = accountRepository.findAllOrderedByAccountTypeAndBalanceDesc(pageable);
+
+        List<AccountResponseDto> result = accounts.getContent().stream()
+                .map(AccountResponseDto::build)
+                .collect(Collectors.toList());
+
+        PaginDto<AccountResponseDto> response = new PaginDto<>();
+        response.setResults(result);
+        response.setLimit(limit);
+        response.setOffset(offset);
+        response.setTotalPages(accounts.getTotalPages());
+        response.setTotalRows(accounts.getTotalElements());
+
+        return response;
     }
 }

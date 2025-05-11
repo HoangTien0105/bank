@@ -1,6 +1,8 @@
 package com.bank.repository;
 
 import com.bank.model.Account;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -12,4 +14,7 @@ import java.util.List;
 public interface AccountRepository extends JpaRepository<Account, String> {
     @Query("SELECT a FROM Account a WHERE a.customer.id = :customerId")
     List<Account> findByCustomerId(@Param("customerId") String customerId);
+
+    @Query("SELECT a FROM Account a ORDER BY a.balanceType, a.balance DESC")
+    Page<Account> findAllOrderedByAccountTypeAndBalanceDesc(Pageable pageable);
 }

@@ -90,4 +90,17 @@ public class TransactionController {
         }
         return ResponseEntity.ok().body(ResponseDto.builder().success(true).message("Withdraw money successfully").build());
     }
+
+    @Operation(summary = "Get transactions by date")
+    @GetMapping(value = "/date")
+    public ResponseEntity<Object> getTransactionsByDate(@RequestParam(value = "offset", defaultValue = "0") String offset,
+                                                        @RequestParam(value = "limit", defaultValue = "10") String limit){
+        PaginDto<TransactionResponseDto> paginDto = new PaginDto<>();
+        paginDto.setOffset(offset);
+        paginDto.setLimit(limit);
+
+        PaginDto<TransactionResponseDto> result = transactionService.getTransactionsOrderByDate(paginDto);
+
+        return ResponseEntity.ok(result);
+    }
 }

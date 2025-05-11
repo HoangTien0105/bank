@@ -59,4 +59,20 @@ public class AccountController {
         }
         return ResponseEntity.ok(ResponseDto.builder().success(true).message("Update account successfully").build());
     }
+
+    @Operation(
+            summary = "Get accounts group by type"
+    )
+    @GetMapping("/type")
+    public ResponseEntity<Object> getAccountsGroupByType(@RequestParam(value = "offset", defaultValue = "0") String offset,
+                                                         @RequestParam(value = "limit", defaultValue = "10") String limit){
+
+        PaginDto<AccountResponseDto> paginDto = new PaginDto<>();
+        paginDto.setOffset(offset);
+        paginDto.setLimit(limit);
+
+        PaginDto<AccountResponseDto> result = accountService.getAccounts(paginDto);
+
+        return ResponseEntity.ok(result);
+    }
 }
