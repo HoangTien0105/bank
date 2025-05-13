@@ -20,6 +20,7 @@ public class CustomerDto {
     private String password;
     private Date createDate;
     private String customerType;
+    private String role;
 
     public static CustomerDto build(Customer cus, CustomerType cusType){
         return builder()
@@ -31,6 +32,7 @@ public class CustomerDto {
                 .address(cus.getAddress())
                 .createDate(cus.getCreateDate())
                 .customerType(cusType.getName())
+                .role("CUSTOMER")
                 .build();
     }
 }

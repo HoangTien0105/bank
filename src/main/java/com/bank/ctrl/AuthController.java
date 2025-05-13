@@ -4,6 +4,7 @@ import com.bank.dto.CustomerDto;
 import com.bank.dto.request.LoginRequestDto;
 import com.bank.dto.response.TokenResponseDto;
 import com.bank.model.Customer;
+import com.bank.model.JwtUser;
 import com.bank.sv.CustomerService;
 import com.bank.sv.TokenService;
 import com.bank.utils.APIResponse;
@@ -16,6 +17,9 @@ import org.springframework.security.authentication.*;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.HashMap;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/auth")
@@ -60,7 +64,13 @@ public class AuthController {
 
     @GetMapping("/me")
     public ResponseEntity<Object> getCurrentUser(Authentication authentication){
-        UserDetails userDetails = (UserDetails) authentication.getPrincipal();
+        JwtUser userDetails = (JwtUser) authentication.getPrincipal();
+        // Kiểm tra nếu là ADMIN
+        if ("admin".equals(userDetails.getId())) {
+            Map<String, String> adminInfo = new HashMap<>();
+            adminInfo.put("role", "ADMIN");
+            return ResponseEntity.ok(apiResponse.response("Retrieve admin info successful", true, adminInfo));
+        }
         CustomerDto customer = customerService.getCustomerById(userDetails.getUsername());
         return ResponseEntity.ok(apiResponse.response("Retrieve customer successful", true, customer));
     }

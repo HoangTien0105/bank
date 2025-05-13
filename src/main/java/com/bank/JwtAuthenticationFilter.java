@@ -47,7 +47,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
                     //Thiết lập chi tiết yêu cầu
                     authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
-                    
+
                     //Lưu xác thực vào SecurityContext
                     SecurityContextHolder.getContext().setAuthentication(authentication);
                 }
