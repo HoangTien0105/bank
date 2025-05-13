@@ -1,5 +1,7 @@
 package com.bank;
 
+import com.bank.model.JwtUser;
+import com.bank.sv.TokenService;
 import com.bank.sv.impl.CustomUserDetailsService;
 import com.bank.utils.JwtTokenUtil;
 import jakarta.servlet.FilterChain;
@@ -9,7 +11,6 @@ import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
@@ -18,6 +19,10 @@ import java.io.IOException;
 
 @Component
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
+
+
+    @Autowired
+    private TokenService tokenService;
 
     @Autowired
     private CustomUserDetailsService userDetailsService;
@@ -34,12 +39,15 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             String username = jwtTokenUtil.getUsernameFromToken(authToken);
             // Nếu cus id k null và chưa có tài khoản nào đã được xác thực trong context
             if(username != null && SecurityContextHolder.getContext().getAuthentication() == null){
-                UserDetails userDetails = userDetailsService.loadUserByUsername(username);
-                if(jwtTokenUtil.validateToken(authToken, userDetails)){
-                    //Tạo object xác thực
-                    UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
+                // Lấy thông tin chi tiết từ token thay vì database để cải thiện hiệu suất
+                JwtUser jwtUser = tokenService.getUserFromToken(authToken);
+                if(jwtTokenUtil.validateToken(authToken, jwtUser)){
+                    // Tạo object xác thực với thông tin đầy đủ từ token
+                    UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(jwtUser, null, jwtUser.getAuthorities());
+
                     //Thiết lập chi tiết yêu cầu
                     authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+                    
                     //Lưu xác thực vào SecurityContext
                     SecurityContextHolder.getContext().setAuthentication(authentication);
                 }

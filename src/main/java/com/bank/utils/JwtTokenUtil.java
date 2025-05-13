@@ -1,8 +1,8 @@
 package com.bank.utils;
 
-import com.bank.model.Customer;
+import com.bank.model.CustomerType;
+import com.bank.model.JwtUser;
 import io.jsonwebtoken.Claims;
-import io.jsonwebtoken.JwtException;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
 import io.jsonwebtoken.security.Keys;
@@ -15,6 +15,7 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
+import java.util.function.Function;
 
 @Component
 public class JwtTokenUtil {
@@ -32,6 +33,21 @@ public class JwtTokenUtil {
         Map<String, Object> claims = new HashMap<>();
         String tokenId = UUID.randomUUID().toString();
         claims.put("tokenId", tokenId);
+        claims.put("type", "access");
+
+        // Add JwtUser information if available
+        if (userDetails instanceof JwtUser) {
+            JwtUser jwtUser = (JwtUser) userDetails;
+            claims.put("name", jwtUser.getName());
+            claims.put("phone", jwtUser.getPhone());
+            claims.put("email", jwtUser.getEmail());
+            claims.put("citizenId", jwtUser.getCitizenId());
+            claims.put("address", jwtUser.getAddress());
+            if (jwtUser.getTypeId() != null) {
+                claims.put("typeId", jwtUser.getTypeId().toString());
+            }
+            claims.put("role", jwtUser.getRole());
+        }
 
         return Jwts.builder()
                 .setClaims(claims)
@@ -42,37 +58,66 @@ public class JwtTokenUtil {
                 .compact();
     }
 
-    public Boolean validateToken(String token, UserDetails userDetails){
-        try{
-            Claims claims = Jwts.parser()
-                    .verifyWith(getSigningKey())
-                    .build()
-                    .parseSignedClaims(token)
-                    .getPayload();
+    public String generateRefreshToken(UserDetails userDetails) {
+        Map<String, Object> claims = new HashMap<>();
+        String tokenId = UUID.randomUUID().toString();
+        claims.put("tokenId", tokenId);
+        claims.put("type", "refresh");
 
-            String user = claims.getSubject();
-            return user.equals(userDetails.getUsername()) && !isTokenExpired(claims);
-        } catch (Exception e){
-            return false;
-        }
+        return Jwts.builder()
+                .setClaims(claims)
+                .setSubject(userDetails.getUsername())
+                .setIssuedAt(new Date())
+                .setExpiration(new Date(System.currentTimeMillis() + expiration * 10 * 1000))
+                .signWith(getSigningKey(), SignatureAlgorithm.HS256)
+                .compact();
     }
 
-    private Boolean isTokenExpired(Claims claims){
-        Date expiration = claims.getExpiration();
+    public <T> T getClaimFromToken(String token, Function<Claims, T> claimsResolver) {
+        final Claims claims = getAllClaimsFromToken(token);
+        return claimsResolver.apply(claims);
+    }
+
+    public Claims getAllClaimsFromToken(String token) {
+        return Jwts.parser()
+                .verifyWith(getSigningKey())
+                .build()
+                .parseSignedClaims(token)
+                .getPayload();
+    }
+
+    public Boolean validateToken(String token, UserDetails userDetails){
+        final String username = getUsernameFromToken(token);
+        return (username.equals(userDetails.getUsername()) && !isTokenExpired(token));
+    }
+
+    public boolean isTokenExpired(String token) {
+        final Date expiration = getExpirationDateFromToken(token);
         return expiration.before(new Date());
     }
 
     public String getUsernameFromToken(String token){
-        try{
-            Claims claims = Jwts.parser()
-                    .verifyWith(getSigningKey())
-                    .build()
-                    .parseSignedClaims(token)
-                    .getBody();
-            return claims.getSubject();
-        } catch (JwtException | IllegalArgumentException e) {
-            return null;
-        }
+        return getClaimFromToken(token, Claims::getSubject);
+    }
+
+    public Date getExpirationDateFromToken(String token) {
+        return getClaimFromToken(token, Claims::getExpiration);
+    }
+
+    public JwtUser getUserFromToken(String token) {
+        Claims claims = getAllClaimsFromToken(token);
+        Long typeId = claims.get("typeId", Long.class);
+
+        return JwtUser.builder()
+                .id(claims.getSubject())
+                .name(claims.get("name", String.class))
+                .phone(claims.get("phone", String.class))
+                .email(claims.get("email", String.class))
+                .citizenId(claims.get("citizenId", String.class))
+                .address(claims.get("address", String.class))
+                .typeId(typeId)
+                .role(claims.get("role", String.class))
+                .build();
     }
 }
 

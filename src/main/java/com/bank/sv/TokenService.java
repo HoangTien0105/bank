@@ -1,6 +1,7 @@
 package com.bank.sv;
 
 import com.bank.dto.response.TokenResponseDto;
+import com.bank.model.JwtUser;
 import org.springframework.security.core.userdetails.UserDetails;
 
 public interface TokenService {
@@ -11,4 +12,5 @@ public interface TokenService {
     boolean isTokenExpired(String token);
     TokenResponseDto generateTokens(UserDetails userDetails);
     void deleteCustomerById(String id);
+    JwtUser getUserFromToken(String token);
 }

@@ -3,10 +3,12 @@ package com.bank.sv.impl;
 import com.bank.constant.Message;
 import com.bank.dto.response.TokenResponseDto;
 import com.bank.model.Customer;
+import com.bank.model.JwtUser;
 import com.bank.model.Token;
 import com.bank.repository.CustomerRepository;
 import com.bank.repository.TokenRepository;
 import com.bank.sv.TokenService;
+import com.bank.utils.JwtTokenUtil;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
@@ -25,6 +27,9 @@ import java.util.UUID;
 
 @Service
 public class TokenServiceImpl implements TokenService {
+    @Autowired
+    private JwtTokenUtil jwtTokenUtil;
+
     @Autowired
     private TokenRepository tokenRepository;
 
@@ -137,46 +142,24 @@ public class TokenServiceImpl implements TokenService {
     @Override
     @Transactional
     public TokenResponseDto generateTokens(UserDetails userDetails) {
-        Map<String, Object> accessClaims = new HashMap<>();
-        String accessTokenId = UUID.randomUUID().toString();
-        accessClaims.put("tokenId", accessTokenId);
-        accessClaims.put("type", "access");
-
-        String accessToken = Jwts.builder()
-                .setClaims(accessClaims)
-                .setSubject(userDetails.getUsername())
-                .setIssuedAt(new Date())
-                .setExpiration(new Date(System.currentTimeMillis() + expiration * 1000))
-                .signWith(getSigningKey(), SignatureAlgorithm.HS256)
-                .compact();
+        // Tạo access token
+        String accessToken = jwtTokenUtil.generateToken(userDetails);
 
         // Tạo refresh token
-        Map<String, Object> refreshClaims = new HashMap<>();
-        String refreshTokenId = UUID.randomUUID().toString();
-        refreshClaims.put("tokenId", refreshTokenId);
-        refreshClaims.put("type", "refresh");
+        String refreshToken = jwtTokenUtil.generateRefreshToken(userDetails);
 
-        String refreshToken = Jwts.builder()
-                .setClaims(refreshClaims)
-                .setSubject(userDetails.getUsername())
-                .setIssuedAt(new Date())
-                .setExpiration(new Date(System.currentTimeMillis() + refreshExpiration * 1000))
-                .signWith(getSigningKey(), SignatureAlgorithm.HS256)
-                .compact();
-
-        Token token = null;
-
-        //Nếu không phải admin thì mới tìm customer
+        // Nếu không phải admin thì tìm customer
         if (!userDetails.getAuthorities().stream()
                 .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"))) {
             String customerId = userDetails.getUsername();
 
+            //Xóa token hiện tại trong database
             tokenRepository.deleteByCustomerId(customerId);
 
             Customer customer = customerRepository.findById(userDetails.getUsername())
                     .orElseThrow(() -> new RuntimeException("Customer not found"));
 
-            token = Token.builder()
+            Token token = Token.builder()
                     .accessToken(accessToken)
                     .refreshToken(refreshToken)
                     .accessTokenExpiry(new Date(System.currentTimeMillis() + expiration * 1000))
@@ -200,5 +183,10 @@ public class TokenServiceImpl implements TokenService {
     @Transactional
     public void deleteCustomerById(String id) {
         tokenRepository.deleteByCustomerId(id);
+    }
+
+    @Override
+    public JwtUser getUserFromToken(String token) {
+        return jwtTokenUtil.getUserFromToken(token);
     }
 }
