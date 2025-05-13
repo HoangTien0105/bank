@@ -39,4 +39,7 @@ public interface CustomerRepository extends JpaRepository<Customer, String> {
                     "WHERE t.location LIKE :location",
             nativeQuery = true)
     Page<Object[]> findCustomerByLocation(@Param("location") String location, Pageable pageable);
+
+    @Query("SELECT c FROM Customer c WHERE LOWER(c.email) = LOWER(:username) OR LOWER(c.phone) = LOWER(:username)")
+    Customer findByEmailOrPhone(@Param("username") String username);
 }
