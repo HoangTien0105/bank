@@ -25,6 +25,7 @@ public interface Message {
     String TRANSACTION_NOT_FOUND = "Transaction not found!";
     String TRANSFER_FAILED = "Transfer money failed";
     String TRANSFER_SUCCESS = "Transfer money successfully";
+    String TRANSFER_INTEREST = "Transfer money from interest ";
 
     //Validate token
     String TOKEN_NOT_FOUND = "Token not found!";

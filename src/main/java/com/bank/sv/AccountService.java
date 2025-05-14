@@ -1,6 +1,7 @@
 package com.bank.sv;
 
 import com.bank.dto.PaginDto;
+import com.bank.dto.request.SavingAccountRequestDto;
 import com.bank.dto.request.UpdateAccountStatusRequestDto;
 import com.bank.dto.response.AccountResponseDto;
 
@@ -9,4 +10,5 @@ public interface AccountService {
     PaginDto<AccountResponseDto> getAccounts(PaginDto<AccountResponseDto> pagin);
     AccountResponseDto getAccountById(String id);
     PaginDto<AccountResponseDto> getAccountsGroupByType(PaginDto<AccountResponseDto> paginDto);
+    void createSavingAccount(SavingAccountRequestDto requestDto, String customerId);
 }

@@ -2,14 +2,17 @@ package com.bank.sv.impl;
 
 import com.bank.constant.Message;
 import com.bank.dto.PaginDto;
+import com.bank.dto.request.SavingAccountRequestDto;
 import com.bank.dto.request.UpdateAccountStatusRequestDto;
 import com.bank.dto.response.AccountResponseDto;
 import com.bank.enums.AccountStatus;
-import com.bank.model.Account;
-import com.bank.model.AccountStatusHistory;
-import com.bank.repository.AccountRepository;
-import com.bank.repository.AccountStatusHistoryRepository;
+import com.bank.enums.AccountType;
+import com.bank.enums.BalanceType;
+import com.bank.enums.TransactionType;
+import com.bank.model.*;
+import com.bank.repository.*;
 import com.bank.sv.AccountService;
+import com.bank.utils.BalanceTypeUtils;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import jakarta.persistence.TypedQuery;
@@ -18,24 +21,36 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.math.BigDecimal;
+import java.math.RoundingMode;
+import java.time.LocalDate;
+import java.time.ZoneId;
+import java.time.temporal.ChronoUnit;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
 public class AccountServiceImpl implements AccountService {
 
     @Autowired
+    private CustomerRepository customerRepository;
+
+    @Autowired
+    private TransactionRepository transactionRepository;
+
+    @Autowired
     private AccountRepository accountRepository;
 
     @Autowired
     private AccountStatusHistoryRepository accountStatusHistoryRepository;
+
+    @Autowired
+    private InterestRateConfigRepository interestRateConfigRepository;
 
     @PersistenceContext
     private EntityManager entityManager;
@@ -168,5 +183,125 @@ public class AccountServiceImpl implements AccountService {
         response.setTotalRows(accounts.getTotalElements());
 
         return response;
+    }
+
+    @Override
+    @Transactional
+    public void createSavingAccount(SavingAccountRequestDto requestDto, String customerId) {
+        //Validate cus
+        Customer customer = customerRepository.findById(customerId).orElseThrow(() -> new RuntimeException("Customer not found"));
+
+        //Validate account
+        Account sourceAccount = accountRepository.findById(requestDto.getSourceAccountId()).orElseThrow(() -> new RuntimeException("Source account not found"));
+
+        // Validate source accounts có phải của cus k
+        if(!sourceAccount.getCustomer().getId().equals(customerId)){
+            throw new RuntimeException("Source account does not belong to customer");
+        }
+
+        if(sourceAccount.getType() != AccountType.CHECKING || sourceAccount.getStatus() != AccountStatus.ACTIVE){
+            throw new RuntimeException("Source account must be a checking account and active");
+        }
+
+        if(sourceAccount.getBalance().compareTo(requestDto.getAmount()) < 0) {
+            throw new RuntimeException("Source account balance is not enough");
+        }
+
+        //Lấy các gói tiết kiệm
+        InterestRateConfig rateConfig = interestRateConfigRepository.findApplicableRatesByMonths(requestDto.getTermMonths());
+
+        if(rateConfig == null){
+            throw new RuntimeException("No interest rate config match " + requestDto.getTermMonths() + " months");
+        }
+
+        //Tính ngày đáo hạn
+        Date maturityDate = Date.from(LocalDate.now().plusMonths(requestDto.getTermMonths()).atStartOfDay(ZoneId.systemDefault()).toInstant());
+
+        //Tạo tài khoản tiết kiệm
+        Account savingAccount = Account.builder()
+                .type(AccountType.SAVING)
+                .status(AccountStatus.ACTIVE)
+                .customer(customer)
+                .balance(requestDto.getAmount())
+                .interestRate(rateConfig.getInterestRate())
+                .maturiryDate(maturityDate)
+                .sourceAccount(sourceAccount)
+                .savingScheduleDay(requestDto.getSavingScheduleDay())
+                .build();
+
+        // Set balance type dựa trên số tiền
+        String balanceStatus = BalanceTypeUtils.validateBalanceStatus(savingAccount);
+        savingAccount.setBalanceType(BalanceType.valueOf(balanceStatus));
+        BalanceTypeUtils.setTransactionLimitBasedOnBalance(savingAccount);
+
+        //Trừ tiền tài khoản gốc
+        sourceAccount.setBalance(sourceAccount.getBalance().subtract(requestDto.getAmount()));
+        String sourceBalanceStatus = BalanceTypeUtils.validateBalanceStatus(sourceAccount);
+        sourceAccount.setBalanceType(BalanceType.valueOf(sourceBalanceStatus));
+        BalanceTypeUtils.setTransactionLimitBasedOnBalance(sourceAccount);
+
+        //Save
+        accountRepository.save(sourceAccount);
+        accountRepository.save(savingAccount);
+    }
+
+    @Scheduled(cron = "0 * * * * ?") // Chạy vào 00:00:00 mỗi ngày
+    @Transactional
+    public void processSavingAccount(){
+        List<Account> maturedAccounts = accountRepository
+                .findByTypeAndStatusAndMaturiryDateLessThanEqual(
+                        AccountType.SAVING,
+                        AccountStatus.ACTIVE,
+                        new Date());
+
+        for(Account savingAccount : maturedAccounts){
+            // Tính lãi
+            BigDecimal interest = calculateInterest(savingAccount);
+
+            // Chuyển tiền gốc + lãi
+            Account sourceAccount = savingAccount.getSourceAccount();
+            sourceAccount.setBalance(sourceAccount.getBalance().add(savingAccount.getBalance().add(interest)));
+
+            //Cập nhật lại balance type
+            String sourceBalanceStatus = BalanceTypeUtils.validateBalanceStatus(sourceAccount);
+            sourceAccount.setBalanceType(BalanceType.valueOf(sourceBalanceStatus));
+            BalanceTypeUtils.setTransactionLimitBasedOnBalance(sourceAccount);
+
+            Transaction transaction = Transaction.builder()
+                    .type(TransactionType.INTEREST)
+                    .amount(interest)
+                    .location("SYSTEM")
+                    .description("Interest payment for saving account " + savingAccount.getId())
+                    .account(sourceAccount)
+                    .build();
+
+            //Inactive tài khoản tiết kiệm
+            savingAccount.setStatus(AccountStatus.INACTIVE);
+            savingAccount.setBalance(BigDecimal.ZERO);
+
+            //Save
+            accountRepository.save(savingAccount);
+            accountRepository.save(sourceAccount);
+            transactionRepository.save(transaction);
+        }
+    }
+
+    private BigDecimal calculateInterest(Account savingAccount) {
+        // Tính số tháng kể từ ngày mở đến ngày đáo hạn
+        LocalDate startDate = savingAccount.getCreateDate().toInstant()
+                .atZone(ZoneId.systemDefault())
+                .toLocalDate();
+
+        LocalDate endDate = savingAccount.getMaturiryDate().toInstant()
+                .atZone(ZoneId.systemDefault())
+                .toLocalDate();
+
+        long months = ChronoUnit.MONTHS.between(startDate,endDate);
+
+        // Tính lãi = Số tiền gốc * (Lãi suất / 365) * Số ngày
+        return savingAccount.getBalance()
+                .multiply(savingAccount.getInterestRate())
+                .multiply(BigDecimal.valueOf(months))
+                .divide(BigDecimal.valueOf(365), 2, RoundingMode.HALF_UP);
     }
 }

@@ -17,6 +17,11 @@ public class AccountResponseDto {
     private BigDecimal balance;
     private BigDecimal transactionLimit;
     private Date openDate;
+    private BigDecimal interestRate;
+    private Date maturiryDate;
+    private Account sourceAccount;
+    private Integer savingScheduleDay;
+
 
     public static AccountResponseDto build(Account account){
         return builder()
@@ -26,6 +31,10 @@ public class AccountResponseDto {
                 .balance(account.getBalance())
                 .transactionLimit(account.getTransactionLimit())
                 .openDate(account.getCreateDate())
+                .interestRate(account.getInterestRate())
+                .maturiryDate(account.getMaturiryDate())
+                .sourceAccount(account.getSourceAccount())
+                .savingScheduleDay(account.getSavingScheduleDay())
                 .build();
     }
 }

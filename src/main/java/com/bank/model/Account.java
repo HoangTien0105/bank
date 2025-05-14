@@ -47,8 +47,8 @@ public class Account extends BaseEntity{
 
     //Ngày đáo hạn
     @Column(name = "maturity_date")
-    @Temporal(TemporalType.DATE)
-    private Date maturiry_date;
+    @Temporal(TemporalType.TIMESTAMP)
+    private Date maturiryDate;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "source_account_id")

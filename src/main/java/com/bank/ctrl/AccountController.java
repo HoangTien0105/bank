@@ -1,17 +1,21 @@
 package com.bank.ctrl;
 
 import com.bank.constant.Message;
+import com.bank.dto.request.SavingAccountRequestDto;
 import com.bank.dto.response.AccountResponseDto;
 import com.bank.dto.PaginDto;
 import com.bank.dto.request.UpdateAccountStatusRequestDto;
 import com.bank.dto.response.ResponseDto;
+import com.bank.model.JwtUser;
 import com.bank.sv.AccountService;
+import com.bank.utils.APIResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -21,6 +25,9 @@ public class AccountController {
 
     @Autowired
     private AccountService accountService;
+
+    @Autowired
+    private APIResponse apiResponse;
 
     @GetMapping
     public ResponseEntity<Object> getAccounts(@RequestParam(value = "offset", defaultValue = "0") String offset,
@@ -74,5 +81,22 @@ public class AccountController {
         PaginDto<AccountResponseDto> result = accountService.getAccounts(paginDto);
 
         return ResponseEntity.ok(result);
+    }
+
+    @Operation(summary = "Create saving account")
+    @PostMapping("/saving")
+    public ResponseEntity<Object> createSavingAccount(
+            @Valid @RequestBody SavingAccountRequestDto requestDto,
+            Authentication authentication
+            ){
+        try{
+            JwtUser jwtUser = (JwtUser) authentication.getPrincipal();
+            accountService.createSavingAccount(requestDto, jwtUser.getId());
+        } catch (Exception e) {
+            return ResponseEntity
+                    .status(HttpStatus.BAD_REQUEST)
+                    .body(apiResponse.response(e.getMessage(), false, null));
+        }
+        return ResponseEntity.ok(apiResponse.response("Create saving account successfully", true, null));
     }
 }

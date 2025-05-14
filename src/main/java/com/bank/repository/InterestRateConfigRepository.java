@@ -14,6 +14,9 @@ public interface InterestRateConfigRepository extends JpaRepository<InterestRate
     @Query("SELECT i FROM InterestRateConfig i WHERE i.status = true AND i.termMonths <= :months ORDER BY i.termMonths DESC")
     List<InterestRateConfig> findApplicableRates(@Param("months") Long months);
 
+    @Query("SELECT i FROM InterestRateConfig i WHERE i.status = true AND i.termMonths = :months ORDER BY i.termMonths DESC")
+    InterestRateConfig findApplicableRatesByMonths(@Param("months") Long months);
+
     @Query("SELECT i FROM InterestRateConfig i WHERE i.status = true ORDER BY i.termMonths ASC")
     List<InterestRateConfig> findAllActiveRates();
 }
