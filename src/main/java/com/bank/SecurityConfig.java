@@ -1,9 +1,8 @@
-package com.bank.utils;
+package com.bank;
 
-import com.bank.JwtAuthenticationFilter;
-import org.apache.tomcat.util.net.openssl.ciphers.Authentication;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.*;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -35,11 +34,14 @@ public class SecurityConfig  {
                         .requestMatchers("/v3/api-docs/**").permitAll()
                         .requestMatchers("/swagger-ui/**").permitAll()
                         .requestMatchers("/swagger-ui.html").permitAll()
+                        .requestMatchers(HttpMethod.GET ,"/api/interest-rates").permitAll()
+                        .requestMatchers(HttpMethod.PUT ,"/api/interest-rates/**").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.POST ,"/api/interest-rates").hasRole("ADMIN")
                         .requestMatchers("/api/customer/**").hasRole("ADMIN")
                         .requestMatchers("/api/transactions/**").authenticated()
                         .requestMatchers("/api/accounts/**").authenticated()
                         .requestMatchers("/api/auth/logout").authenticated()
-                        .requestMatchers("/api/auth/me").authenticated() 
+                        .requestMatchers("/api/auth/me").authenticated()
                         .anyRequest().authenticated()
                 );
 

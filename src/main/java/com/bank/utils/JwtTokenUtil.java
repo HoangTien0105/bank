@@ -35,6 +35,19 @@ public class JwtTokenUtil {
         claims.put("tokenId", tokenId);
         claims.put("type", "access");
 
+        String role;
+    if (userDetails instanceof JwtUser) {
+        JwtUser jwtUser = (JwtUser) userDetails;
+        role = jwtUser.getRole();
+    } else {
+        // Lấy role từ authorities của UserDetails
+        role = userDetails.getAuthorities().stream()
+            .findFirst()
+            .map(auth -> auth.getAuthority().replace("ROLE_", ""))
+            .orElse("CUSTOMER");
+    }
+    claims.put("role", role);
+
         // Add JwtUser information if available
         if (userDetails instanceof JwtUser) {
             JwtUser jwtUser = (JwtUser) userDetails;
@@ -46,7 +59,6 @@ public class JwtTokenUtil {
             if (jwtUser.getTypeId() != null) {
                 claims.put("typeId", jwtUser.getTypeId().toString());
             }
-            claims.put("role", jwtUser.getRole());
         }
 
         return Jwts.builder()

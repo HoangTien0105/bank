@@ -106,9 +106,13 @@ public class TokenServiceImpl implements TokenService {
         // Tạo refresh token
         String refreshToken = jwtTokenUtil.generateRefreshToken(userDetails);
 
+         String role = userDetails.getAuthorities().stream()
+                .findFirst()
+                .map(auth -> auth.getAuthority().replace("ROLE_", ""))
+                .orElse("CUSTOMER");
+
         // Nếu không phải admin thì tìm customer
-        if (!userDetails.getAuthorities().stream()
-                .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"))) {
+        if (!role.equals("ADMIN")) {
             String customerId = userDetails.getUsername();
 
             //Xóa token hiện tại trong database

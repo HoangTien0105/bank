@@ -51,6 +51,9 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                         //Thiết lập chi tiết yêu cầu
                         authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
 
+                        // Trong JwtAuthenticationFilter
+                        System.out.println("Authorities: " + jwtUser.getAuthorities());
+
                         //Lưu xác thực vào SecurityContext
                         SecurityContextHolder.getContext().setAuthentication(authentication);
                     }
@@ -59,10 +62,10 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         } catch (ExpiredJwtException e) {
             response.setStatus(HttpStatus.UNAUTHORIZED.value());
             response.setContentType("application/json");
-            response.getWriter().write("{\"message\":\"Access token đã hết hạn\",\"success\":false}");
+            response.getWriter().write("{\"message\":\"Access token is out of date\",\"success\":false}");
             return;
         } catch (Exception e){
-            logger.error("Không thể set user authentication: {}", e);
+            logger.error("Can not set user authentication: {}", e);
         }
         //Chuyển yêu cầu đến bộ lọc tiếp theo
         filterChain.doFilter(request, response);

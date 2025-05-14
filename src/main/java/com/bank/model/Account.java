@@ -7,6 +7,7 @@ import jakarta.persistence.*;
 import lombok.*;
 
 import java.math.BigDecimal;
+import java.util.Date;
 
 @AllArgsConstructor
 @NoArgsConstructor
@@ -38,4 +39,21 @@ public class Account extends BaseEntity{
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "customer_id", nullable = false)
     private Customer customer;
+
+    //Tài khoản tiết kiệm
+    //Lãi suất
+    @Column(name = "interest_rate", columnDefinition = "decimal")
+    private BigDecimal interestRate;
+
+    //Ngày đáo hạn
+    @Column(name = "maturity_date")
+    @Temporal(TemporalType.DATE)
+    private Date maturiry_date;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "source_account_id")
+    private Account sourceAccount;
+
+    @Column(name = "saving_schedule_day")
+    private Integer savingScheduleDay;
 }
