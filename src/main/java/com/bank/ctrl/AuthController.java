@@ -8,7 +8,12 @@ import com.bank.model.JwtUser;
 import com.bank.sv.CustomerService;
 import com.bank.sv.TokenService;
 import com.bank.utils.APIResponse;
+import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.ExpiredJwtException;
+import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.servlet.http.HttpServlet;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -16,6 +21,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.*;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.HashMap;
@@ -80,5 +86,28 @@ public class AuthController {
         UserDetails userDetails = (UserDetails) authentication.getPrincipal();
         tokenService.deleteCustomerById(userDetails.getUsername());
         return ResponseEntity.ok(apiResponse.response("Logout successful", true, null));
+    }
+
+
+    @Operation(summary = "Refresh access token if refresh token is still valid")
+    @PostMapping("/refreshToken")
+    public ResponseEntity<Object> refreshToken(HttpServletRequest request){
+        String refreshToken = tokenService.extractRefreshTokenFromRequest(request);
+        if (refreshToken == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(apiResponse.response("Refresh token did not exists", false, null));
+        }
+
+        try {
+            TokenResponseDto tokenResponseDto = tokenService.refreshToken(refreshToken);
+
+            return ResponseEntity.ok(apiResponse.response("Token refreshed successfully", true, tokenResponseDto));
+        } catch (ExpiredJwtException e) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(apiResponse.response("Refresh token is out of date", false, null));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(apiResponse.response("Token is invalid", false, null));
+        }
     }
 }
