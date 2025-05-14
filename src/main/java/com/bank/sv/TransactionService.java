@@ -6,7 +6,7 @@ import com.bank.dto.request.MoneyUpdateRequest;
 import com.bank.dto.response.TransactionResponseDto;
 
 public interface TransactionService {
-    PaginDto<TransactionResponseDto> getTransactions(PaginDto<TransactionResponseDto> pagin);
+    PaginDto<TransactionResponseDto> getTransactions(PaginDto<TransactionResponseDto> paginDto, String customerId, String role);
     PaginDto<TransactionResponseDto> getTransactionsOrderByDate(PaginDto<TransactionResponseDto> paginDto);
     TransactionResponseDto getTransactionById(String id);
     void transferMoney(MoneyTransferRequestDto request);

@@ -6,6 +6,7 @@ import com.bank.dto.request.MoneyTransferRequestDto;
 import com.bank.dto.request.MoneyUpdateRequest;
 import com.bank.dto.response.ResponseDto;
 import com.bank.dto.response.TransactionResponseDto;
+import com.bank.model.JwtUser;
 import com.bank.sv.TransactionService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -14,6 +15,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -27,12 +30,15 @@ public class TransactionController {
     public ResponseEntity<Object> getTransactions(@RequestParam(value = "offset", defaultValue = "0") String offset,
                                               @RequestParam(value = "limit", defaultValue = "10") String limit,
                                               @RequestParam(value = "keyword", required = false) String keyword){
-        PaginDto<TransactionResponseDto> pagin = new PaginDto<>();
-        pagin.setOffset(offset);
-        pagin.setLimit(limit);
-        pagin.setKeyword(keyword);
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        JwtUser jwtUser = (JwtUser) authentication.getPrincipal();
 
-        PaginDto<TransactionResponseDto> result = transactionService.getTransactions(pagin);
+        PaginDto<TransactionResponseDto> paginDto = new PaginDto<>();
+        paginDto.setOffset(offset);
+        paginDto.setLimit(limit);
+        paginDto.setKeyword(keyword);
+
+        PaginDto<TransactionResponseDto> result = transactionService.getTransactions(paginDto, jwtUser.getId(), jwtUser.getRole());
 
         return ResponseEntity.ok(result);
     }

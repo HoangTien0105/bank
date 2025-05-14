@@ -47,22 +47,39 @@ public class TransactionServiceImpl implements TransactionService {
     private EntityManager entityManager;
 
     @Override
-    public PaginDto<TransactionResponseDto> getTransactions(PaginDto<TransactionResponseDto> pagin) {
+    public PaginDto<TransactionResponseDto> getTransactions(PaginDto<TransactionResponseDto> paginDto, String customerId, String role) {
 
-        int offset = pagin.getOffset() != null ? pagin.getOffset() : 0;
-        int limit = pagin.getLimit() != null ? pagin.getLimit() : 10;
+        int offset = paginDto.getOffset() != null ? paginDto.getOffset() : 0;
+        int limit = paginDto.getLimit() != null ? paginDto.getLimit() : 10;
 
-        String keyword = pagin.getKeyword();
+        String keyword = paginDto.getKeyword();
 
         int pageNumber = offset / limit;
 
-        String jpql = "SELECT t FROM Transaction t WHERE " +
-                "(:keyword IS NULL OR " +
-                "LOWER(a.description) LIKE :searchPattern OR " +
-                "LOWER(a.type) LIKE :searchPattern OR " +
-                "LOWER(a.location) LIKE :searchPattern)";
+        String jpql;
+        TypedQuery<Transaction> query;
 
-        TypedQuery<Transaction> query = entityManager.createQuery(jpql, Transaction.class);
+        if ("ADMIN".equals(role)) {
+            // Admin can see all transactions
+            jpql = "SELECT t FROM Transaction t WHERE " +
+                    "(:keyword IS NULL OR " +
+                    "LOWER(t.description) LIKE :searchPattern OR " +
+                    "LOWER(t.type) LIKE :searchPattern OR " +
+                    "LOWER(t.location) LIKE :searchPattern)";
+
+            query = entityManager.createQuery(jpql, Transaction.class);
+        } else {
+            // Regular customers can only see their own transactions
+            jpql = "SELECT t FROM Transaction t WHERE t.account IN " +
+                    "(SELECT a FROM Account a WHERE a.customer.id = :customerId) AND " +
+                    "(:keyword IS NULL OR " +
+                    "LOWER(t.description) LIKE :searchPattern OR " +
+                    "LOWER(t.type) LIKE :searchPattern OR " +
+                    "LOWER(t.location) LIKE :searchPattern)";
+
+            query = entityManager.createQuery(jpql, Transaction.class);
+            query.setParameter("customerId", customerId);
+        }
 
         if (StringUtils.hasText(keyword)) {
             String searchPattern = "%" + keyword.toLowerCase() + "%";
@@ -73,42 +90,48 @@ public class TransactionServiceImpl implements TransactionService {
             query.setParameter("searchPattern", null);
         }
 
-        List<Transaction> transactions = query
-                .setFirstResult(offset)
-                .setMaxResults(limit)
-                .getResultList();
+        // Set pagination
+        query.setFirstResult(pageNumber * limit);
+        query.setMaxResults(limit);
 
-        String countJpql = "SELECT COUNT(t) FROM Transaction t WHERE " +
-                "(:keyword IS NULL OR " +
-                "LOWER(a.description) LIKE :searchPattern OR " +
-                "LOWER(a.type) LIKE :searchPattern OR " +
-                "LOWER(a.location) LIKE :searchPattern)";
+        List<Transaction> transactions = query.getResultList();
+
+        String countJpql = jpql.replace("SELECT t", "SELECT COUNT(t)");
 
         TypedQuery<Long> countQuery = entityManager.createQuery(countJpql, Long.class);
-
-        if (StringUtils.hasText(keyword)) {
-            String searchPattern = "%" + keyword.toLowerCase() + "%";
-            countQuery.setParameter("keyword", keyword);
-            countQuery.setParameter("searchPattern", searchPattern);
+        if ("ADMIN".equals(role)) {
+            if (StringUtils.hasText(paginDto.getKeyword())) {
+                countQuery.setParameter("keyword", paginDto.getKeyword());
+                countQuery.setParameter("searchPattern", "%" + paginDto.getKeyword().toLowerCase() + "%");
+            } else {
+                countQuery.setParameter("keyword", null);
+                countQuery.setParameter("searchPattern", null);
+            }
         } else {
-            countQuery.setParameter("keyword", null);
-            countQuery.setParameter("searchPattern", null);
+            countQuery.setParameter("customerId", customerId);
+            if (StringUtils.hasText(paginDto.getKeyword())) {
+                countQuery.setParameter("keyword", paginDto.getKeyword());
+                countQuery.setParameter("searchPattern", "%" + paginDto.getKeyword().toLowerCase() + "%");
+            } else {
+                countQuery.setParameter("keyword", null);
+                countQuery.setParameter("searchPattern", null);
+            }
         }
 
         Long totalRows = countQuery.getSingleResult();
 
         List<TransactionResponseDto> response = transactions.stream()
                 .map(TransactionResponseDto::build)
-                .toList();
+                .collect(Collectors.toList());
 
-        pagin.setResults(response);
-        pagin.setOffset(offset);
-        pagin.setLimit(limit);
-        pagin.setPageNumber(pageNumber + 1);
-        pagin.setTotalRows(totalRows);
-        pagin.setTotalPages((int) Math.ceil((double) totalRows / limit));
+        paginDto.setResults(response);
+        paginDto.setOffset(offset);
+        paginDto.setLimit(limit);
+        paginDto.setPageNumber(pageNumber + 1);
+        paginDto.setTotalRows(totalRows);
+        paginDto.setTotalPages((int) Math.ceil((double) totalRows / limit));
 
-        return pagin;
+        return paginDto ;
     }
 
     @Override
