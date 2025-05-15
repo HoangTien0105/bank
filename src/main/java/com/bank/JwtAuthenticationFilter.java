@@ -35,6 +35,12 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain) throws ServletException, IOException {
         try{
+            // Bỏ qua kiểm tra JWT cho Actuator endpoints
+            if (request.getRequestURI().startsWith("/actuator")) {
+                filterChain.doFilter(request, response);
+                return  ;
+            }
+
             String authToken = request.getHeader("Authorization");
             if(authToken != null && authToken.startsWith("Bearer ")){
                 authToken = authToken.substring(7);

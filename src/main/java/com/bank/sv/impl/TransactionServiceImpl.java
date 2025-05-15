@@ -20,6 +20,7 @@ import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import jakarta.persistence.TypedQuery;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -47,6 +48,7 @@ public class TransactionServiceImpl implements TransactionService {
     private EntityManager entityManager;
 
     @Override
+    @Cacheable(value = "transactions",key = "#paginDto.toString() + '_' + #customerId + '_' + #role")
     public PaginDto<TransactionResponseDto> getTransactions(PaginDto<TransactionResponseDto> paginDto, String customerId, String role) {
 
         int offset = paginDto.getOffset() != null ? paginDto.getOffset() : 0;
