@@ -16,6 +16,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -30,23 +31,26 @@ public class AccountController {
     private APIResponse apiResponse;
 
     @GetMapping
-    public ResponseEntity<Object> getAccounts(@RequestParam(value = "offset", defaultValue = "0") String offset,
-                                              @RequestParam(value = "limit", defaultValue = "10") String limit,
+    public ResponseEntity<Object> getAccounts(@RequestParam(value = "offset", defaultValue = "0") Integer offset,
+                                              @RequestParam(value = "limit", defaultValue = "10") Integer limit,
                                               @RequestParam(value = "keyword", required = false) String keyword){
-        PaginDto<AccountResponseDto> pagin = new PaginDto<>();
-        pagin.setOffset(offset);
-        pagin.setLimit(limit);
-        pagin.setKeyword(keyword);
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        JwtUser jwtUser = (JwtUser) authentication.getPrincipal();
 
-        PaginDto<AccountResponseDto> result = accountService.getAccounts(pagin);
+        PaginDto<AccountResponseDto> paginDto = new PaginDto<>();
+        paginDto.setOffset(offset);
+        paginDto.setLimit(limit);
+        paginDto.setKeyword(keyword);
 
-        return ResponseEntity.ok(result);
+        PaginDto<AccountResponseDto> result = accountService.getAccounts(paginDto, jwtUser.getId(), jwtUser.getRole());
+
+        return ResponseEntity.ok(apiResponse.response("Retrieved data successfully", true, result));
     }
 
     @GetMapping("{id}")
     public ResponseEntity<Object> getAccountById(@PathVariable(value = "id") String id){
         AccountResponseDto response = accountService.getAccountById(id);
-        return ResponseEntity.ok(response);
+        return ResponseEntity.ok(apiResponse.response("Retrieved data successfully", true, response));
     }
 
     @Operation(
@@ -64,23 +68,24 @@ public class AccountController {
                     .message(Message.UPDATE_FAIL)
                     .build());
         }
-        return ResponseEntity.ok(ResponseDto.builder().success(true).message("Update account successfully").build());
+        return ResponseEntity.ok(apiResponse.response("Update account successfully", true, null));
     }
 
     @Operation(
             summary = "Get accounts group by type"
     )
     @GetMapping("/type")
-    public ResponseEntity<Object> getAccountsGroupByType(@RequestParam(value = "offset", defaultValue = "0") String offset,
-                                                         @RequestParam(value = "limit", defaultValue = "10") String limit){
-
+    public ResponseEntity<Object> getAccountsGroupByType(@RequestParam(value = "offset", defaultValue = "0") Integer offset,
+                                                         @RequestParam(value = "limit", defaultValue = "10") Integer limit){
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        JwtUser jwtUser = (JwtUser) authentication.getPrincipal();
         PaginDto<AccountResponseDto> paginDto = new PaginDto<>();
         paginDto.setOffset(offset);
         paginDto.setLimit(limit);
 
-        PaginDto<AccountResponseDto> result = accountService.getAccounts(paginDto);
+        PaginDto<AccountResponseDto> result = accountService.getAccountsGroupByType(paginDto, jwtUser.getId(), jwtUser.getRole());
 
-        return ResponseEntity.ok(result);
+        return ResponseEntity.ok(apiResponse.response("Retrieved data successfully", true, result));
     }
 
     @Operation(summary = "Create saving account")

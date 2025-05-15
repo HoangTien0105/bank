@@ -7,8 +7,8 @@ import com.bank.dto.response.AccountResponseDto;
 
 public interface AccountService {
     void updateAccountStatus(String id, UpdateAccountStatusRequestDto request);
-    PaginDto<AccountResponseDto> getAccounts(PaginDto<AccountResponseDto> pagin);
+    PaginDto<AccountResponseDto> getAccounts(PaginDto<AccountResponseDto> paginDto, String customerId, String role);
     AccountResponseDto getAccountById(String id);
-    PaginDto<AccountResponseDto> getAccountsGroupByType(PaginDto<AccountResponseDto> paginDto);
+    PaginDto<AccountResponseDto> getAccountsGroupByType(PaginDto<AccountResponseDto> paginDto, String customerId, String role);
     void createSavingAccount(SavingAccountRequestDto requestDto, String customerId);
 }

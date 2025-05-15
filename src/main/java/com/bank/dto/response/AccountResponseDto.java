@@ -19,7 +19,7 @@ public class AccountResponseDto {
     private Date openDate;
     private BigDecimal interestRate;
     private Date maturiryDate;
-    private Account sourceAccount;
+    private String sourceAccount;
     private Integer savingScheduleDay;
 
 
@@ -33,7 +33,7 @@ public class AccountResponseDto {
                 .openDate(account.getCreateDate())
                 .interestRate(account.getInterestRate())
                 .maturiryDate(account.getMaturiryDate())
-                .sourceAccount(account.getSourceAccount())
+                .sourceAccount(account.getSourceAccount() != null ? account.getSourceAccount().getId() : null)
                 .savingScheduleDay(account.getSavingScheduleDay())
                 .build();
     }

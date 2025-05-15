@@ -27,8 +27,8 @@ public class TransactionController {
     private TransactionService transactionService;
 
     @GetMapping
-    public ResponseEntity<Object> getTransactions(@RequestParam(value = "offset", defaultValue = "0") String offset,
-                                              @RequestParam(value = "limit", defaultValue = "10") String limit,
+    public ResponseEntity<Object> getTransactions(@RequestParam(value = "offset", defaultValue = "0") Integer offset,
+                                              @RequestParam(value = "limit", defaultValue = "10") Integer limit,
                                               @RequestParam(value = "keyword", required = false) String keyword){
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         JwtUser jwtUser = (JwtUser) authentication.getPrincipal();

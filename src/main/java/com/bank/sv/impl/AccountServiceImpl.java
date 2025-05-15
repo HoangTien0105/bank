@@ -18,6 +18,7 @@ import jakarta.persistence.PersistenceContext;
 import jakarta.persistence.TypedQuery;
 import jakarta.validation.ValidationException;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -92,21 +93,38 @@ public class AccountServiceImpl implements AccountService {
     }
 
     @Override
-    public PaginDto<AccountResponseDto> getAccounts(PaginDto<AccountResponseDto> pagin) {
+    @Cacheable(value = "accounts",key = "#paginDto.toString() + '_' + #customerId + '_' + #role")
+    public PaginDto<AccountResponseDto> getAccounts(PaginDto<AccountResponseDto> paginDto, String customerId, String role) {
 
-        int offset = pagin.getOffset() != null ? pagin.getOffset() : 0;
-        int limit = pagin.getLimit() != null ? pagin.getLimit() : 10;
+        int offset = paginDto.getOffset() != null ? paginDto.getOffset() : 0;
+        int limit = paginDto.getLimit() != null ? paginDto.getLimit() : 10;
 
-        String keyword = pagin.getKeyword();
+        String keyword = paginDto.getKeyword();
 
         int pageNumber = offset / limit;
 
-        String jpql = "SELECT a FROM Account a WHERE " +
-                "(:keyword IS NULL OR " +
-                "LOWER(a.status) LIKE :searchPattern OR " +
-                "LOWER(a.type) LIKE :searchPattern)";
+        String jpql;
+        TypedQuery<Account> query;
 
-        TypedQuery<Account> query = entityManager.createQuery(jpql, Account.class);
+        if ("ADMIN".equals(role)) {
+            // Admin can see all accounts
+            jpql = "SELECT a FROM Account a WHERE " +
+                    "(:keyword IS NULL OR " +
+                    "LOWER(a.status) LIKE :searchPattern OR " +
+                    "LOWER(a.type) LIKE :searchPattern)";
+
+            query = entityManager.createQuery(jpql, Account.class);
+        } else {
+            // Regular customers can only see their own accounts
+            jpql = "SELECT a FROM Account a JOIN a.customer c WHERE " +
+                    "c.id = :customerId AND " +
+                    "(:keyword IS NULL OR " +
+                    "LOWER(a.status) LIKE :searchPattern OR " +
+                    "LOWER(a.type) LIKE :searchPattern)";
+
+            query = entityManager.createQuery(jpql, Account.class);
+            query.setParameter("customerId", customerId);
+        }
 
         if (StringUtils.hasText(keyword)) {
             String searchPattern = "%" + keyword.toLowerCase() + "%";
@@ -122,12 +140,26 @@ public class AccountServiceImpl implements AccountService {
                 .setMaxResults(limit)
                 .getResultList();
 
-        String countJpql = "SELECT COUNT(a) FROM Account a WHERE " +
-                "(:keyword IS NULL OR " +
-                "LOWER(a.status) LIKE :searchPattern OR " +
-                "LOWER(a.type) LIKE :searchPattern)";
+        String countJpql;
+        TypedQuery<Long> countQuery;
 
-        TypedQuery<Long> countQuery = entityManager.createQuery(countJpql, Long.class);
+        if("ADMIN".equals(role)){
+            countJpql = "SELECT COUNT(a) FROM Account a WHERE " +
+                    "(:keyword IS NULL OR " +
+                    "LOWER(a.status) LIKE :searchPattern OR " +
+                    "LOWER(a.type) LIKE :searchPattern)";
+
+            countQuery = entityManager.createQuery(countJpql, Long.class);
+        } else{
+            countJpql = "SELECT COUNT(a) FROM Account a JOIN a.customer c WHERE " +
+                    "c.id = :customerId AND " +
+                    "(:keyword IS NULL OR " +
+                    "LOWER(a.status) LIKE :searchPattern OR " +
+                    "LOWER(a.type) LIKE :searchPattern)";
+
+            countQuery = entityManager.createQuery(countJpql, Long.class);
+            countQuery.setParameter("customerId", customerId);
+        }
 
         if (StringUtils.hasText(keyword)) {
             String searchPattern = "%" + keyword.toLowerCase() + "%";
@@ -144,14 +176,14 @@ public class AccountServiceImpl implements AccountService {
                 .map(AccountResponseDto::build)
                 .toList();
 
-        pagin.setResults(response);
-        pagin.setOffset(offset);
-        pagin.setLimit(limit);
-        pagin.setPageNumber(pageNumber + 1);
-        pagin.setTotalRows(totalRows);
-        pagin.setTotalPages((int) Math.ceil((double) totalRows / limit));
+        paginDto.setResults(response);
+        paginDto.setOffset(offset);
+        paginDto.setLimit(limit);
+        paginDto.setPageNumber(pageNumber + 1);
+        paginDto.setTotalRows(totalRows);
+        paginDto.setTotalPages((int) Math.ceil((double) totalRows / limit));
 
-        return pagin;
+        return paginDto;
     }
 
     @Override
@@ -161,28 +193,95 @@ public class AccountServiceImpl implements AccountService {
     }
 
     @Override
-    public PaginDto<AccountResponseDto> getAccountsGroupByType(PaginDto<AccountResponseDto> paginDto) {
+    public PaginDto<AccountResponseDto> getAccountsGroupByType(PaginDto<AccountResponseDto> paginDto, String customerId, String role) {
         int offset = paginDto.getOffset() != null ? paginDto.getOffset() : 0;
         int limit = paginDto.getLimit() != null ? paginDto.getLimit() : 10;
-
+        String keyword = paginDto.getKeyword();
         int pageNumber = offset / limit;
 
-        Pageable pageable = PageRequest.of(pageNumber, limit);
+        String jpql;
+        TypedQuery<Account> query;
 
-        Page<Account> accounts = accountRepository.findAllOrderedByAccountTypeAndBalanceDesc(pageable);
+        if ("ADMIN".equals(role)) {
+            // Admin can see all accounts
+            jpql = "SELECT a FROM Account a WHERE " +
+                    "(:keyword IS NULL OR " +
+                    "LOWER(a.status) LIKE :searchPattern OR " +
+                    "LOWER(a.type) LIKE :searchPattern) " +
+                    "ORDER BY a.type, a.balance DESC";
 
-        List<AccountResponseDto> result = accounts.getContent().stream()
+            query = entityManager.createQuery(jpql, Account.class);
+        } else {
+            // Regular customers can only see their own accounts
+            jpql = "SELECT a FROM Account a JOIN a.customer c WHERE " +
+                    "c.id = :customerId AND " +
+                    "(:keyword IS NULL OR " +
+                    "LOWER(a.status) LIKE :searchPattern OR " +
+                    "LOWER(a.type) LIKE :searchPattern) " +
+                    "ORDER BY a.type, a.balance DESC";
+
+            query = entityManager.createQuery(jpql, Account.class);
+            query.setParameter("customerId", customerId);
+        }
+
+        if (StringUtils.hasText(keyword)) {
+            String searchPattern = "%" + keyword.toLowerCase() + "%";
+            query.setParameter("keyword", keyword);
+            query.setParameter("searchPattern", searchPattern);
+        } else {
+            query.setParameter("keyword", null);
+            query.setParameter("searchPattern", null);
+        }
+
+        List<Account> accounts = query
+                .setFirstResult(offset)
+                .setMaxResults(limit)
+                .getResultList();
+
+        String countJpql;
+        TypedQuery<Long> countQuery;
+
+        if("ADMIN".equals(role)){
+            countJpql = "SELECT COUNT(a) FROM Account a WHERE " +
+                    "(:keyword IS NULL OR " +
+                    "LOWER(a.status) LIKE :searchPattern OR " +
+                    "LOWER(a.type) LIKE :searchPattern)";
+
+            countQuery = entityManager.createQuery(countJpql, Long.class);
+        } else{
+            countJpql = "SELECT COUNT(a) FROM Account a JOIN a.customer c WHERE " +
+                    "c.id = :customerId AND " +
+                    "(:keyword IS NULL OR " +
+                    "LOWER(a.status) LIKE :searchPattern OR " +
+                    "LOWER(a.type) LIKE :searchPattern)";
+
+            countQuery = entityManager.createQuery(countJpql, Long.class);
+            countQuery.setParameter("customerId", customerId);
+        }
+
+        if (StringUtils.hasText(keyword)) {
+            String searchPattern = "%" + keyword.toLowerCase() + "%";
+            countQuery.setParameter("keyword", keyword);
+            countQuery.setParameter("searchPattern", searchPattern);
+        } else {
+            countQuery.setParameter("keyword", null);
+            countQuery.setParameter("searchPattern", null);
+        }
+
+        Long totalRows = countQuery.getSingleResult();
+
+        List<AccountResponseDto> response = accounts.stream()
                 .map(AccountResponseDto::build)
-                .collect(Collectors.toList());
+                .toList();
 
-        PaginDto<AccountResponseDto> response = new PaginDto<>();
-        response.setResults(result);
-        response.setLimit(limit);
-        response.setOffset(offset);
-        response.setTotalPages(accounts.getTotalPages());
-        response.setTotalRows(accounts.getTotalElements());
+        paginDto.setResults(response);
+        paginDto.setOffset(offset);
+        paginDto.setLimit(limit);
+        paginDto.setPageNumber(pageNumber + 1);
+        paginDto.setTotalRows(totalRows);
+        paginDto.setTotalPages((int) Math.ceil((double) totalRows / limit));
 
-        return response;
+        return paginDto;
     }
 
     @Override
