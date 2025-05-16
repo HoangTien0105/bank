@@ -9,6 +9,7 @@ import com.bank.dto.response.CustomerLocationDto;
 import com.bank.dto.response.ResponseDto;
 import com.bank.sv.CustomerService;
 import com.bank.sv.CustomerTypeService;
+import com.bank.utils.APIResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -23,6 +24,9 @@ import java.util.List;
 @RequestMapping("/api/customers")
 @Tag(name = "Customers")
 public class CustomerController {
+
+    @Autowired
+    private APIResponse apiResponse;
 
     @Autowired
     private CustomerService customerService;
@@ -41,20 +45,20 @@ public class CustomerController {
 
         PaginDto<CustomerDto> result = customerService.getCustomers(paginDto);
 
-        return ResponseEntity.ok(result);
+        return ResponseEntity.ok(apiResponse.response("Retrieved data successfully", true, result));
     }
 
     @GetMapping("{id}")
     public ResponseEntity<Object> getCustomerById(@RequestParam(value = "id") String id){
         CustomerDto customer = customerService.getCustomerById(id);
 
-        return ResponseEntity.ok(customer);
+        return ResponseEntity.ok(apiResponse.response("Retrieved data successfully", true, customer));
     }
 
     @GetMapping("/name")
     public ResponseEntity<Object> getCustomerByNAme(@RequestParam(value = "name") String name){
         List<CustomerDto> customerList = customerService.getCustomerByName(name);
-        return ResponseEntity.ok(customerList);
+        return ResponseEntity.ok(apiResponse.response("Retrieved data successfully", true, customerList));
     }
 
     @Operation(
@@ -65,14 +69,9 @@ public class CustomerController {
         try{
             customerService.createCustomer(request);
         } catch (Exception e){
-            return ResponseEntity.badRequest().body(ResponseDto.builder()
-                    .errorCode(HttpStatus.BAD_REQUEST.value())
-                    .errorDescription(e.getMessage())
-                    .success(false)
-                    .message(Message.CREATE_FAIL)
-                    .build());
+            return ResponseEntity.badRequest().body(apiResponse.response(e.getMessage(), false, null));
         }
-        return ResponseEntity.ok(ResponseDto.builder().success(true).message("Create customer successfully").build());
+        return ResponseEntity.ok(apiResponse.response("Create customer with accounts successfully", true, null));
     }
 
     @PutMapping("{id}")
@@ -80,14 +79,9 @@ public class CustomerController {
         try{
             customerService.updateCustomer(id, request);
         } catch (Exception e){
-            return ResponseEntity.badRequest().body(ResponseDto.builder()
-                    .errorCode(HttpStatus.BAD_REQUEST.value())
-                    .errorDescription(e.getMessage())
-                    .success(false)
-                    .message(Message.UPDATE_FAIL)
-                    .build());
+            return ResponseEntity.badRequest().body(apiResponse.response(e.getMessage(), false, null));
         }
-        return ResponseEntity.ok(ResponseDto.builder().success(true).message("Update customer successfully").build());
+        return ResponseEntity.ok(apiResponse.response("Update successfully", true, null));
     }
 
 
@@ -96,9 +90,9 @@ public class CustomerController {
         try{
             customerTypeService.createCustomerType(name);
         } catch (Exception e){
-            return ResponseEntity.ok(ResponseDto.builder().success(false).message(e.getMessage()).build());
+            return ResponseEntity.badRequest().body(apiResponse.response(e.getMessage(), false, null));
         }
-        return ResponseEntity.ok(ResponseDto.builder().success(true).message("Create customer type successfully").build());
+        return ResponseEntity.ok(apiResponse.response("Create type successfully", true, null));
     }
 
     @Operation(
@@ -114,6 +108,6 @@ public class CustomerController {
 
         PaginDto<CustomerLocationDto> result = customerService.getCustomersByLocation(paginDto, location);
 
-        return ResponseEntity.ok(result);
+        return ResponseEntity.ok(apiResponse.response("Retrieved data successfully", true, result));
     }
 }

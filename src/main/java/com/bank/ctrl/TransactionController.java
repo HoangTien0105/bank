@@ -1,6 +1,5 @@
 package com.bank.ctrl;
 
-import com.bank.constant.Message;
 import com.bank.dto.PaginDto;
 import com.bank.dto.request.MoneyTransferRequestDto;
 import com.bank.dto.request.MoneyUpdateRequest;
@@ -8,12 +7,12 @@ import com.bank.dto.response.ResponseDto;
 import com.bank.dto.response.TransactionResponseDto;
 import com.bank.model.JwtUser;
 import com.bank.sv.TransactionService;
+import com.bank.utils.APIResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -23,6 +22,9 @@ import org.springframework.web.bind.annotation.*;
 @RequestMapping("/api/transactions")
 @Tag(name = "Transactions")
 public class TransactionController {
+    @Autowired
+    private APIResponse apiResponse;
+
     @Autowired
     private TransactionService transactionService;
 
@@ -40,13 +42,13 @@ public class TransactionController {
 
         PaginDto<TransactionResponseDto> result = transactionService.getTransactions(paginDto, jwtUser.getId(), jwtUser.getRole());
 
-        return ResponseEntity.ok(result);
+        return ResponseEntity.ok(apiResponse.response("Retrieved data successfully", true, result));
     }
 
     @GetMapping("{id}")
     public ResponseEntity<Object> getTransactionByID(@PathVariable(value = "id") String id){
         TransactionResponseDto response = transactionService.getTransactionById(id);
-        return ResponseEntity.ok(response);
+        return ResponseEntity.ok(apiResponse.response("Retrieved data successfully", true, response));
     }
 
     @Operation(summary = "Transfer money")
@@ -55,14 +57,9 @@ public class TransactionController {
         try{
             transactionService.transferMoney(request);
         } catch (Exception e){
-            return ResponseEntity.badRequest().body(ResponseDto.builder()
-                    .errorCode(HttpStatus.BAD_REQUEST.value())
-                    .errorDescription(e.getMessage())
-                    .success(false)
-                    .message("Transfer money failed")
-                    .build());
+            return ResponseEntity.badRequest().body(apiResponse.response(e.getMessage(), false, null));
         }
-        return ResponseEntity.ok().body(ResponseDto.builder().success(true).message("Transfer money successfully").build());
+        return ResponseEntity.ok(apiResponse.response("Transfer money successfully", true, null));
     }
 
     @Operation(summary = "Deposit money")
@@ -71,14 +68,9 @@ public class TransactionController {
         try{
             transactionService.depositMoney(request);
         } catch (Exception e){
-            return ResponseEntity.badRequest().body(ResponseDto.builder()
-                    .errorCode(HttpStatus.BAD_REQUEST.value())
-                    .errorDescription(e.getMessage())
-                    .success(false)
-                    .message("Deposit money failed")
-                    .build());
+            return ResponseEntity.badRequest().body(apiResponse.response(e.getMessage(), false, null));
         }
-        return ResponseEntity.ok().body(ResponseDto.builder().success(true).message("Deposit money successfully").build());
+        return ResponseEntity.ok(apiResponse.response("Deposit money successfully", true, null));
     }
 
     @Operation(summary = "Withdraw money")
@@ -87,14 +79,9 @@ public class TransactionController {
         try{
             transactionService.withdrawMoney(request);
         } catch (Exception e){
-            return ResponseEntity.badRequest().body(ResponseDto.builder()
-                    .errorCode(HttpStatus.BAD_REQUEST.value())
-                    .errorDescription(e.getMessage())
-                    .success(false)
-                    .message("Withdraw money failed")
-                    .build());
+            return ResponseEntity.badRequest().body(apiResponse.response(e.getMessage(), false, null));
         }
-        return ResponseEntity.ok().body(ResponseDto.builder().success(true).message("Withdraw money successfully").build());
+        return ResponseEntity.ok(apiResponse.response("Withdraw money successfully", true, null));
     }
 
     @Operation(summary = "Get transactions by date")
@@ -107,6 +94,6 @@ public class TransactionController {
 
         PaginDto<TransactionResponseDto> result = transactionService.getTransactionsOrderByDate(paginDto);
 
-        return ResponseEntity.ok(result);
+        return ResponseEntity.ok(apiResponse.response("Retrieved data successfully", true, result));
     }
 }
