@@ -169,7 +169,7 @@ public class TransactionServiceImpl implements TransactionService {
 
     @Override
     @Transactional
-    public void transferMoney(MoneyTransferRequestDto request) {
+    public void transferMoney(MoneyTransferRequestDto request, String customerId) {
         String fromAccountId = request.getFromAccountId();
         String toAccountId = request.getToAccountId();
         String description = request.getDescription();
@@ -182,6 +182,10 @@ public class TransactionServiceImpl implements TransactionService {
                 .orElseThrow(() -> new RuntimeException("From account does not exists"));
         Account toAccount = accountRepository.findById(toAccountId)
                 .orElseThrow(() -> new RuntimeException("To account does not exists"));
+
+        if(!fromAccount.getCustomer().getId().equals(customerId)){
+            throw new RuntimeException("This account does not belong to this customers");
+        }
 
         if(fromAccount.getStatus() != AccountStatus.ACTIVE){
             throw new RuntimeException("Source account must be active");
@@ -254,8 +258,12 @@ public class TransactionServiceImpl implements TransactionService {
 
     @Override
     @Transactional
-    public void depositMoney(MoneyUpdateRequest request) {
+    public void depositMoney(MoneyUpdateRequest request, String customerId) {
         Account account = accountRepository.findById(request.getAccountId()).orElseThrow(() -> new RuntimeException("Account not found"));
+
+        if(!account.getCustomer().getId().equals(customerId)){
+            throw new RuntimeException("This account does not belong to this customers");
+        }
 
         if(account.getStatus() != AccountStatus.ACTIVE){
             throw new RuntimeException("Account must be active");
@@ -282,8 +290,12 @@ public class TransactionServiceImpl implements TransactionService {
 
     @Override
     @Transactional
-    public void withdrawMoney(MoneyUpdateRequest request) {
+    public void withdrawMoney(MoneyUpdateRequest request, String customerId) {
         Account account = accountRepository.findById(request.getAccountId()).orElseThrow(() -> new RuntimeException("Account not found"));
+
+        if(!account.getCustomer().getId().equals(customerId)){
+            throw new RuntimeException("This account does not belong to this customers");
+        }
 
         if(account.getStatus() != AccountStatus.ACTIVE){
             throw new RuntimeException("Account must be active");

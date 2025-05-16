@@ -55,7 +55,9 @@ public class TransactionController {
     @PostMapping(value = "/transfer")
     public ResponseEntity<Object> transferMoney(@Valid @RequestBody MoneyTransferRequestDto request){
         try{
-            transactionService.transferMoney(request);
+            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+            JwtUser jwtUser = (JwtUser) authentication.getPrincipal();
+            transactionService.transferMoney(request, jwtUser.getId());
         } catch (Exception e){
             return ResponseEntity.badRequest().body(apiResponse.response(e.getMessage(), false, null));
         }
@@ -66,7 +68,9 @@ public class TransactionController {
     @PostMapping(value = "/deposit")
     public ResponseEntity<Object> depositMoney(@Valid @RequestBody MoneyUpdateRequest request){
         try{
-            transactionService.depositMoney(request);
+            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+            JwtUser jwtUser = (JwtUser) authentication.getPrincipal();
+            transactionService.depositMoney(request, jwtUser.getId());
         } catch (Exception e){
             return ResponseEntity.badRequest().body(apiResponse.response(e.getMessage(), false, null));
         }
@@ -77,7 +81,9 @@ public class TransactionController {
     @PostMapping(value = "/withdraw")
     public ResponseEntity<Object> withdrawMoney(@Valid @RequestBody MoneyUpdateRequest request){
         try{
-            transactionService.withdrawMoney(request);
+            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+            JwtUser jwtUser = (JwtUser) authentication.getPrincipal();
+            transactionService.withdrawMoney(request, jwtUser.getId());
         } catch (Exception e){
             return ResponseEntity.badRequest().body(apiResponse.response(e.getMessage(), false, null));
         }
