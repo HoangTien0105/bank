@@ -10,7 +10,7 @@ public interface TokenService {
     String getUsernameFromToken(String token);
     boolean isTokenExpired(String token);
     TokenResponseDto generateTokens(UserDetails userDetails);
-    void deleteCustomerById(String id);
+    void deleteByCustomerById(String id);
     JwtUser getUserFromToken(String token);
     String extractRefreshTokenFromRequest(HttpServletRequest request);
     TokenResponseDto refreshToken(String refreshToken);

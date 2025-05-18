@@ -143,7 +143,7 @@ public class TokenServiceImpl implements TokenService {
 
     @Override
     @Transactional
-    public void deleteCustomerById(String id) {
+    public void deleteByCustomerById(String id) {
         tokenRepository.deleteByCustomerId(id);
     }
 

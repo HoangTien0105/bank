@@ -84,7 +84,7 @@ public class AuthController {
     @PostMapping("/logout")
     public ResponseEntity<Object> logout(Authentication authentication){
         UserDetails userDetails = (UserDetails) authentication.getPrincipal();
-        tokenService.deleteCustomerById(userDetails.getUsername());
+        tokenService.deleteByCustomerById(userDetails.getUsername());
         return ResponseEntity.ok(apiResponse.response("Logout successful", true, null));
     }
 
