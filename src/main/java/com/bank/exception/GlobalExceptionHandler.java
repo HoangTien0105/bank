@@ -17,9 +17,8 @@ public class GlobalExceptionHandler {
 
         ResponseDto response = ResponseDto.builder()
                 .success(false)
-                .message("Validation failed")
-                .errorCode(HttpStatus.BAD_REQUEST.value())
-                .errorDescription(errorMessage)
+                .statusCode(HttpStatus.BAD_REQUEST.value())
+                .message(errorMessage)
                 .build();
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
     }

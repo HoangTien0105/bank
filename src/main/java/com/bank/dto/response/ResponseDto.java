@@ -10,8 +10,7 @@ import lombok.*;
 @Setter
 public class ResponseDto<T> {
     private String message;
-    private Integer errorCode;
-    private String errorDescription;
+    private Integer statusCode;
     boolean success;
     @JsonInclude(JsonInclude.Include.NON_NULL)
     private T response;

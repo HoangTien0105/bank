@@ -61,12 +61,7 @@ public class AccountController {
         try{
             accountService.updateAccountStatus(id, request);
         } catch (Exception e){
-            return ResponseEntity.badRequest().body(ResponseDto.builder()
-                    .errorCode(HttpStatus.BAD_REQUEST.value())
-                    .errorDescription(e.getMessage())
-                    .success(false)
-                    .message(Message.UPDATE_FAIL)
-                    .build());
+            return ResponseEntity.badRequest().body(apiResponse.response("Update account successfully", true, null));
         }
         return ResponseEntity.ok(apiResponse.response("Update account successfully", true, null));
     }
