@@ -41,14 +41,14 @@ public class Account extends BaseEntity{
     private Customer customer;
 
     //Tài khoản tiết kiệm
-    //Lãi suất
+    //Lãi suất theo hằng năm
     @Column(name = "interest_rate", columnDefinition = "decimal")
     private BigDecimal interestRate;
 
     //Ngày đáo hạn
     @Column(name = "maturity_date")
     @Temporal(TemporalType.TIMESTAMP)
-    private Date maturiryDate;
+    private Date maturityDate;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "source_account_id")
@@ -56,4 +56,8 @@ public class Account extends BaseEntity{
 
     @Column(name = "saving_schedule_day")
     private Integer savingScheduleDay;
+
+    //Số tiền nạp hàng tháng
+    @Column(name = "monthly_deposit_amount", columnDefinition = "decimal")
+    private BigDecimal monthlyDepositAmount;
 }

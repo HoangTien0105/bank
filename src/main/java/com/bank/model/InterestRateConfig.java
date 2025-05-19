@@ -20,7 +20,7 @@ public class InterestRateConfig extends BaseEntity {
     @Column(name = "term_months", nullable = false)
     private Integer termMonths;
 
-    // Lãi suất theo %
+    // Lãi suất theo % hằng năm
     @Column(name = "interest_rate", nullable = false, columnDefinition = "decimal")
     private BigDecimal interestRate;
 

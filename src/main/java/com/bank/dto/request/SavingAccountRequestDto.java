@@ -19,5 +19,6 @@ public class SavingAccountRequestDto {
     @NotNull
     private Long termMonths;
 
-    private Integer savingScheduleDay;
+    @Positive
+    private BigDecimal monthlyDepositAmount;
 }

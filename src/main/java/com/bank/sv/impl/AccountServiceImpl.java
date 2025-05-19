@@ -13,15 +13,13 @@ import com.bank.model.*;
 import com.bank.repository.*;
 import com.bank.sv.AccountService;
 import com.bank.utils.BalanceTypeUtils;
+import com.bank.utils.DateUtils;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import jakarta.persistence.TypedQuery;
 import jakarta.validation.ValidationException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.cache.annotation.Cacheable;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -30,10 +28,9 @@ import org.springframework.util.StringUtils;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.ZoneId;
-import java.time.temporal.ChronoUnit;
 import java.util.*;
-import java.util.stream.Collectors;
 
 @Service
 public class AccountServiceImpl implements AccountService {
@@ -70,13 +67,13 @@ public class AccountServiceImpl implements AccountService {
 
         // Validate và chuyển đổi status từ String sang AccountStatus
         AccountStatus newStatus;
-        try{
+        try {
             newStatus = AccountStatus.valueOf(request.getStatus().toUpperCase());
         } catch (IllegalArgumentException e) {
             throw new ValidationException(Message.INVALID_ACCOUNT_STATUS);
         }
 
-        if(account.getStatus() == newStatus){
+        if (account.getStatus() == newStatus) {
             throw new ValidationException(Message.ACCOUNT_STATUS_ALREADY_SET);
         }
 
@@ -93,7 +90,7 @@ public class AccountServiceImpl implements AccountService {
     }
 
     @Override
-    @Cacheable(value = "accounts",key = "#paginDto.toString() + '_' + #customerId + '_' + #role")
+    @Cacheable(value = "accounts", key = "#paginDto.toString() + '_' + #customerId + '_' + #role")
     public PaginDto<AccountResponseDto> getAccounts(PaginDto<AccountResponseDto> paginDto, String customerId, String role) {
 
         int offset = paginDto.getOffset() != null ? paginDto.getOffset() : 0;
@@ -143,14 +140,14 @@ public class AccountServiceImpl implements AccountService {
         String countJpql;
         TypedQuery<Long> countQuery;
 
-        if("ADMIN".equals(role)){
+        if ("ADMIN".equals(role)) {
             countJpql = "SELECT COUNT(a) FROM Account a WHERE " +
                     "(:keyword IS NULL OR " +
                     "LOWER(a.status) LIKE :searchPattern OR " +
                     "LOWER(a.type) LIKE :searchPattern)";
 
             countQuery = entityManager.createQuery(countJpql, Long.class);
-        } else{
+        } else {
             countJpql = "SELECT COUNT(a) FROM Account a JOIN a.customer c WHERE " +
                     "c.id = :customerId AND " +
                     "(:keyword IS NULL OR " +
@@ -241,14 +238,14 @@ public class AccountServiceImpl implements AccountService {
         String countJpql;
         TypedQuery<Long> countQuery;
 
-        if("ADMIN".equals(role)){
+        if ("ADMIN".equals(role)) {
             countJpql = "SELECT COUNT(a) FROM Account a WHERE " +
                     "(:keyword IS NULL OR " +
                     "LOWER(a.status) LIKE :searchPattern OR " +
                     "LOWER(a.type) LIKE :searchPattern)";
 
             countQuery = entityManager.createQuery(countJpql, Long.class);
-        } else{
+        } else {
             countJpql = "SELECT COUNT(a) FROM Account a JOIN a.customer c WHERE " +
                     "c.id = :customerId AND " +
                     "(:keyword IS NULL OR " +
@@ -294,23 +291,33 @@ public class AccountServiceImpl implements AccountService {
         Account sourceAccount = accountRepository.findById(requestDto.getSourceAccountId()).orElseThrow(() -> new RuntimeException("Source account not found"));
 
         // Validate source accounts có phải của cus k
-        if(!sourceAccount.getCustomer().getId().equals(customerId)){
+        if (!sourceAccount.getCustomer().getId().equals(customerId)) {
             throw new RuntimeException("Source account does not belong to customer");
         }
 
-        if(sourceAccount.getType() != AccountType.CHECKING || sourceAccount.getStatus() != AccountStatus.ACTIVE){
+        if (sourceAccount.getType() != AccountType.CHECKING || sourceAccount.getStatus() != AccountStatus.ACTIVE) {
             throw new RuntimeException("Source account must be a checking account and active");
         }
 
-        if(sourceAccount.getBalance().compareTo(requestDto.getAmount()) < 0) {
+        if (sourceAccount.getBalance().compareTo(requestDto.getAmount()) < 0) {
             throw new RuntimeException("Source account balance is not enough");
         }
 
         //Lấy các gói tiết kiệm
         InterestRateConfig rateConfig = interestRateConfigRepository.findApplicableRatesByMonths(requestDto.getTermMonths());
 
-        if(rateConfig == null){
+        if (rateConfig == null) {
             throw new RuntimeException("No interest rate config match " + requestDto.getTermMonths() + " months");
+        }
+
+        int depositDay = 0;
+        if (requestDto.getMonthlyDepositAmount() != null && requestDto.getMonthlyDepositAmount().compareTo(BigDecimal.ZERO) > 0) {
+            depositDay = LocalDate.now().getDayOfMonth();
+
+            // Nếu ngày tạo từ 29-31, mặc định sẽ nạp vào ngày 1 tháng sau
+            if (depositDay >= 29) {
+                depositDay = 1;
+            }
         }
 
         //Tính ngày đáo hạn
@@ -323,9 +330,10 @@ public class AccountServiceImpl implements AccountService {
                 .customer(customer)
                 .balance(requestDto.getAmount())
                 .interestRate(rateConfig.getInterestRate())
-                .maturiryDate(maturityDate)
+                .maturityDate(maturityDate)
                 .sourceAccount(sourceAccount)
-                .savingScheduleDay(requestDto.getSavingScheduleDay())
+                .savingScheduleDay(depositDay > 0 ? depositDay : null)
+                .monthlyDepositAmount(requestDto.getMonthlyDepositAmount())
                 .build();
 
         // Set balance type dựa trên số tiền
@@ -339,40 +347,58 @@ public class AccountServiceImpl implements AccountService {
         sourceAccount.setBalanceType(BalanceType.valueOf(sourceBalanceStatus));
         BalanceTypeUtils.setTransactionLimitBasedOnBalance(sourceAccount);
 
+        // Tạo transaction cho việc tạo tài khoản tiết kiệm
+
+        Date transactionDate = Date.from(LocalDateTime.now().atZone(ZoneId.systemDefault()).toInstant());
+
+        Transaction transaction = Transaction.builder()
+                .type(TransactionType.SAVING_CREATION)
+                .amount(requestDto.getAmount())
+                .location("SYSTEM")
+                .description("Initial deposit for saving account")
+                .account(savingAccount)
+                .transactionDate(transactionDate)
+                .build();
+
         //Save
         accountRepository.save(sourceAccount);
         accountRepository.save(savingAccount);
+        transactionRepository.save(transaction);
     }
 
-    @Scheduled(cron = "0 * * * * ?") // Chạy vào 00:00:00 mỗi ngày
+    @Scheduled(cron = "0 * * * * ?") // Chạy vào 00:00:00 mỗi ngày và inactive các tài khoản đến ngày đáo hạn
     @Transactional
-    public void processSavingAccount(){
+    public void processSavingAccount() {
         List<Account> maturedAccounts = accountRepository
-                .findByTypeAndStatusAndMaturiryDateLessThanEqual(
+                .findByTypeAndStatusAndmaturityDateLessThanEqual(
                         AccountType.SAVING,
                         AccountStatus.ACTIVE,
                         new Date());
 
-        for(Account savingAccount : maturedAccounts){
+        for (Account savingAccount : maturedAccounts) {
+            Account sourceAccount = savingAccount.getSourceAccount();
             // Tính lãi
+            BigDecimal principal = savingAccount.getBalance();
             BigDecimal interest = calculateInterest(savingAccount);
+            BigDecimal totalAmount = principal.add(interest);
+
+            // Tạo giao dịch lãi
+            Transaction transaction = Transaction.builder()
+                    .type(TransactionType.INTEREST)
+                    .amount(totalAmount)
+                    .location("SYSTEM")
+                    .description("Interest payment for saving account " + savingAccount.getId())
+                    .account(sourceAccount)
+                    .transactionDate(new Date())
+                    .build();
 
             // Chuyển tiền gốc + lãi
-            Account sourceAccount = savingAccount.getSourceAccount();
-            sourceAccount.setBalance(sourceAccount.getBalance().add(savingAccount.getBalance().add(interest)));
+            sourceAccount.setBalance(sourceAccount.getBalance().add(totalAmount));
 
             //Cập nhật lại balance type
             String sourceBalanceStatus = BalanceTypeUtils.validateBalanceStatus(sourceAccount);
             sourceAccount.setBalanceType(BalanceType.valueOf(sourceBalanceStatus));
             BalanceTypeUtils.setTransactionLimitBasedOnBalance(sourceAccount);
-
-            Transaction transaction = Transaction.builder()
-                    .type(TransactionType.INTEREST)
-                    .amount(interest)
-                    .location("SYSTEM")
-                    .description("Interest payment for saving account " + savingAccount.getId())
-                    .account(sourceAccount)
-                    .build();
 
             //Inactive tài khoản tiết kiệm
             savingAccount.setStatus(AccountStatus.INACTIVE);
@@ -385,22 +411,138 @@ public class AccountServiceImpl implements AccountService {
         }
     }
 
+    @Scheduled(cron = "0 0 0 * * ?")
+    @Transactional
+    public void monthlyDeposit() {
+        int currentDay = LocalDate.now().getDayOfMonth();
+
+        //Tìm tài khoản tiết kiệm có ngày bằng currentDay và số tiền cần nạp > 0
+        List<Account> accountsToDeposit = accountRepository
+                .findByTypeAndStatusAndSavingScheduleDayAndMonthlyDepositAmountGreaterThan(
+                        AccountType.SAVING,
+                        AccountStatus.ACTIVE,
+                        currentDay,
+                        BigDecimal.ZERO
+                );
+
+        for (Account account : accountsToDeposit) {
+            Account sourceAccount = account.getSourceAccount();
+
+            Transaction transaction = Transaction.builder()
+                    .amount(account.getMonthlyDepositAmount())
+                    .location("SYSTEM")
+                    .account(sourceAccount)
+                    .build();
+
+            //Kiểm tra xem tài khoản đủ tiền k
+            if (sourceAccount.getBalance().compareTo(account.getMonthlyDepositAmount()) >= 0) {
+                //Trừ tiền tài khoản nguồn
+                sourceAccount.setBalance(sourceAccount.getBalance().subtract(account.getMonthlyDepositAmount()));
+
+                //Cộng tiền vào tài khoản tiết kiệm
+                account.setBalance(account.getBalance().add(account.getMonthlyDepositAmount()));
+
+                //Cập nhật balance type
+                String sourceBalanceStatus = BalanceTypeUtils.validateBalanceStatus(sourceAccount);
+                sourceAccount.setBalanceType(BalanceType.valueOf(sourceBalanceStatus));
+                BalanceTypeUtils.setTransactionLimitBasedOnBalance(sourceAccount);
+
+                String savingBalanceStatus = BalanceTypeUtils.validateBalanceStatus(account);
+                account.setBalanceType(BalanceType.valueOf(savingBalanceStatus));
+                BalanceTypeUtils.setTransactionLimitBasedOnBalance(account);
+
+                //Tạo transaction success
+                transaction.setType(TransactionType.SAVING_DEPOSIT_SUCCESS);
+                transaction.setDescription("Monthly deposit to saving account " + account.getId());
+                //Save
+                accountRepository.save(sourceAccount);
+                accountRepository.save(account);
+            } else {
+                //Tạo transaction failed
+                transaction.setType(TransactionType.SAVING_DEPOSIT_FAILED);
+                transaction.setDescription("Failed monthly deposit to saving account " + account.getId() + " due to insufficient balance in source account");
+            }
+            transactionRepository.save(transaction);
+        }
+    }
+
     private BigDecimal calculateInterest(Account savingAccount) {
         // Tính số tháng kể từ ngày mở đến ngày đáo hạn
         LocalDate startDate = savingAccount.getCreateDate().toInstant()
                 .atZone(ZoneId.systemDefault())
                 .toLocalDate();
 
-        LocalDate endDate = savingAccount.getMaturiryDate().toInstant()
+        LocalDate endDate = savingAccount.getMaturityDate().toInstant()
                 .atZone(ZoneId.systemDefault())
                 .toLocalDate();
 
-        long months = ChronoUnit.MONTHS.between(startDate,endDate);
 
-        // Tính lãi = Số tiền gốc * (Lãi suất / 365) * Số ngày
-        return savingAccount.getBalance()
-                .multiply(savingAccount.getInterestRate())
-                .multiply(BigDecimal.valueOf(months))
-                .divide(BigDecimal.valueOf(365), 2, RoundingMode.HALF_UP);
+        int months = DateUtils.calculateMonths(startDate, endDate);
+
+        //Lãi suất hàng tháng
+        BigDecimal monthlyRate = savingAccount.getInterestRate()
+                .divide(BigDecimal.valueOf(12), 10, RoundingMode.HALF_UP);
+
+        // Trường hợp có tiền gửi hàng tháng
+        // Lấy giao dịch tạo tài khoản để biết số dư ban đầu
+        Transaction creationTransaction = transactionRepository.findFirstByAccountAndTypeOrderByTransactionDateAsc(savingAccount, TransactionType.SAVING_CREATION);
+
+        BigDecimal initialBalance = (creationTransaction != null) ? creationTransaction.getAmount() : savingAccount.getBalance();
+
+        // Không có tiền gửi hàng tháng
+        if (savingAccount.getMonthlyDepositAmount() == null ||
+                savingAccount.getMonthlyDepositAmount().compareTo(BigDecimal.ZERO) <= 0) {
+
+            // Tính lãi kép = Số tiền gốc * [(1 + lãi suất tháng)^số tháng - 1]
+            return savingAccount.getBalance().multiply
+                    ((BigDecimal.ONE.add(monthlyRate)
+                            .pow(months))
+                            .subtract(BigDecimal.ONE))
+                    .setScale(2, RoundingMode.HALF_UP);
+        }
+
+        //Lấy tất cả giao dịch gửi tiền hằng tháng thành công
+        List<Transaction> successfulDeposits = transactionRepository.findByAccountAndTypeOrderByTransactionDateAsc(savingAccount, TransactionType.SAVING_DEPOSIT_SUCCESS);
+
+        //Nếu không có giao dịch thì làm như ban đầu
+        if(successfulDeposits.isEmpty()){
+            return initialBalance.multiply(
+                    (BigDecimal.ONE.add(monthlyRate)
+                            .pow(months))
+                            .subtract(BigDecimal.ONE)
+            ).setScale(2, RoundingMode.HALF_UP);
+        }
+
+        //Tính lãi kép cho cả số dư ban đầu và các khoản tiền gửi hàng tháng
+        BigDecimal totalInterest = BigDecimal.ZERO;
+
+        // 1. Tính lão cho số dư ban đầu từ ngày mở đến ngày đáo hạn
+        BigDecimal initialInterest = initialBalance.multiply(
+                BigDecimal.ONE.add(monthlyRate)
+                        .pow(months)
+                        .subtract(BigDecimal.ONE)
+        );
+        totalInterest = totalInterest.add(initialInterest);
+
+        //2. Tính lãi cho từng khoản tiền gửi hàng tháng
+        for (Transaction deposit : successfulDeposits) {
+            LocalDate depositDate = deposit.getTransactionDate().toInstant()
+                    .atZone(ZoneId.systemDefault())
+                    .toLocalDate();
+
+            // Tính số tháng từ ngày gửi đến ngày đáo hạn
+            int remainingMonths = DateUtils.calculateMonths(depositDate, endDate);
+
+            // Tính lãi cho khoản tiền gửi này
+            if (remainingMonths > 0) {
+                BigDecimal depositInterest = deposit.getAmount().multiply(
+                        BigDecimal.ONE.add(monthlyRate)
+                                .pow(remainingMonths)
+                                .subtract(BigDecimal.ONE)
+                );
+                totalInterest = totalInterest.add(depositInterest);
+            }
+        }
+        return totalInterest.setScale(2, RoundingMode.HALF_UP);
     }
 }
