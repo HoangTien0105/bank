@@ -1,6 +1,5 @@
 package com.bank.sv.impl;
 
-import com.bank.constant.Message;
 import com.bank.dto.response.TokenResponseDto;
 import com.bank.model.Customer;
 import com.bank.model.JwtUser;
@@ -12,7 +11,6 @@ import com.bank.utils.JwtTokenUtil;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.ExpiredJwtException;
 import io.jsonwebtoken.Jwts;
-import io.jsonwebtoken.SignatureAlgorithm;
 import io.jsonwebtoken.security.Keys;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -24,9 +22,6 @@ import org.springframework.util.StringUtils;
 
 import javax.crypto.SecretKey;
 import java.util.Date;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.UUID;
 
 @Service
 public class TokenServiceImpl implements TokenService {
@@ -138,6 +133,7 @@ public class TokenServiceImpl implements TokenService {
                 .refreshToken(refreshToken)
                 .tokenType("Bearer")
                 .expiresIn(expiration)
+                .role(role)
                 .build();
     }
 

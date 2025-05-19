@@ -16,10 +16,10 @@ import java.util.Date;
 @Table(name = "token")
 public class Token extends BaseEntity {
 
-    @Column(name = "access_token")
+    @Column(name = "access_token", length = 1000)
     private String accessToken;
 
-    @Column(name = "refresh_token")
+    @Column(name = "refresh_token", length = 1000)
     private String refreshToken;
 
     @Temporal(TemporalType.TIMESTAMP)
