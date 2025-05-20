@@ -41,4 +41,7 @@ public interface AccountRepository extends JpaRepository<Account, String> {
             @Param("savingScheduleDay") Integer savingScheduleDay,
             @Param("monthlyDepositAmount") BigDecimal monthlyDepositAmount
     );
+
+    @Query("SELECT COUNT(a) FROM Account a WHERE a.type = SAVING AND a.createDate BETWEEN :startDate AND :endDate")
+    Long countAllNewCreatedSavingAccountsByDate(Date startDate, Date endDate);
 }

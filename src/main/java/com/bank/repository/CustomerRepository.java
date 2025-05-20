@@ -8,6 +8,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.util.Date;
 import java.util.List;
 
 @Repository
@@ -42,4 +43,10 @@ public interface CustomerRepository extends JpaRepository<Customer, String> {
 
     @Query("SELECT c FROM Customer c WHERE LOWER(c.email) = LOWER(:username) OR LOWER(c.phone) = LOWER(:username)")
     Customer findByEmailOrPhone(@Param("username") String username);
+
+    @Query("SELECT COUNT(c) FROM Customer c WHERE c.createDate BETWEEN :startDate AND :endDate")
+    Long countAllNewCustomersByDate(Date startDate, Date endDate);
+
+    @Query("SELECT COUNT(c) FROM Customer c WHERE c.createDate <= :endDate")
+    Long countTotalCustomersByDate(Date endDate);
 }

@@ -11,4 +11,6 @@ public interface AccountService {
     AccountResponseDto getAccountById(String id);
     PaginDto<AccountResponseDto> getAccountsGroupByType(PaginDto<AccountResponseDto> paginDto, String customerId, String role);
     void createSavingAccount(SavingAccountRequestDto requestDto, String customerId);
+    void processSavingAccount();
+    void monthlyDeposit();
 }

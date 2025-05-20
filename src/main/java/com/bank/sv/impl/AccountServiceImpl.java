@@ -368,7 +368,6 @@ public class AccountServiceImpl implements AccountService {
         transactionRepository.save(transaction);
     }
 
-    @Scheduled(cron = "0 0 0 * * ?") // Chạy vào 00:00:00 mỗi ngày và inactive các tài khoản đến ngày đáo hạn
     @Transactional
     public void processSavingAccount() {
         List<Account> maturedAccounts = accountRepository
@@ -413,7 +412,6 @@ public class AccountServiceImpl implements AccountService {
         }
     }
 
-    @Scheduled(cron = "0 0 0 * * ?")
     @Transactional
     public void monthlyDeposit() {
         int currentDay = LocalDate.now().getDayOfMonth();

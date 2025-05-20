@@ -59,6 +59,8 @@ public class SecurityConfig  {
                         .requestMatchers(HttpMethod.PUT ,"/api/interest-rates/**").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.POST ,"/api/interest-rates").hasRole("ADMIN")
                         .requestMatchers("/api/customer/**").hasRole("ADMIN")
+                        .requestMatchers("/api/admin-stats/generate").hasRole("ADMIN")
+                        .requestMatchers("/api/admin-stats/**").hasRole("ADMIN")
                         .requestMatchers("/api/transactions/**").authenticated()
                         .requestMatchers("/api/accounts/**").authenticated()
                         .requestMatchers("/api/auth/logout").authenticated()
