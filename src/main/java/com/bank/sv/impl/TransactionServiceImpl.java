@@ -133,7 +133,7 @@ public class TransactionServiceImpl implements TransactionService {
         paginDto.setTotalRows(totalRows);
         paginDto.setTotalPages((int) Math.ceil((double) totalRows / limit));
 
-        return paginDto ;
+        return paginDto;
     }
 
     @Override

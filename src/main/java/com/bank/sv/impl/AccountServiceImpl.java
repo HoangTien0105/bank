@@ -115,6 +115,7 @@ public class AccountServiceImpl implements AccountService {
             // Regular customers can only see their own accounts
             jpql = "SELECT a FROM Account a JOIN a.customer c WHERE " +
                     "c.id = :customerId AND " +
+                    "(a.status = ACTIVE AND a.type = SAVING) AND " +
                     "(:keyword IS NULL OR " +
                     "LOWER(a.status) LIKE :searchPattern OR " +
                     "LOWER(a.type) LIKE :searchPattern)";
@@ -150,6 +151,7 @@ public class AccountServiceImpl implements AccountService {
         } else {
             countJpql = "SELECT COUNT(a) FROM Account a JOIN a.customer c WHERE " +
                     "c.id = :customerId AND " +
+                    "(a.status = ACTIVE AND a.type = SAVING) AND " +
                     "(:keyword IS NULL OR " +
                     "LOWER(a.status) LIKE :searchPattern OR " +
                     "LOWER(a.type) LIKE :searchPattern)";
@@ -495,9 +497,9 @@ public class AccountServiceImpl implements AccountService {
 
             // Tính lãi kép = Số tiền gốc * [(1 + lãi suất tháng)^số tháng - 1]
             return savingAccount.getBalance().multiply
-                    ((BigDecimal.ONE.add(monthlyRate)
-                            .pow(months))
-                            .subtract(BigDecimal.ONE))
+                            ((BigDecimal.ONE.add(monthlyRate)
+                                    .pow(months))
+                                    .subtract(BigDecimal.ONE))
                     .setScale(2, RoundingMode.HALF_UP);
         }
 
@@ -505,7 +507,7 @@ public class AccountServiceImpl implements AccountService {
         List<Transaction> successfulDeposits = transactionRepository.findByAccountAndTypeOrderByTransactionDateAsc(savingAccount, TransactionType.SAVING_DEPOSIT_SUCCESS);
 
         //Nếu không có giao dịch thì làm như ban đầu
-        if(successfulDeposits.isEmpty()){
+        if (successfulDeposits.isEmpty()) {
             return initialBalance.multiply(
                     (BigDecimal.ONE.add(monthlyRate)
                             .pow(months))
