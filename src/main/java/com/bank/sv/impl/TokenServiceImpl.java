@@ -43,12 +43,13 @@ public class TokenServiceImpl implements TokenService {
     @Value("${jwt.refreshExpiration}")
     private Long refreshExpiration;
 
-    private SecretKey getSigningKey(){
+    private SecretKey getSigningKey() {
         return Keys.hmacShaKeyFor(secret.getBytes());
     }
+
     @Override
     public boolean validateToken(String token, UserDetails userDetails) {
-        try{
+        try {
             Claims claims = Jwts.parser()
                     .verifyWith(getSigningKey())
                     .build()
@@ -57,14 +58,14 @@ public class TokenServiceImpl implements TokenService {
 
             String username = claims.getSubject();
             return username.equals(userDetails.getUsername()) && !isTokenExpired(token);
-        } catch (Exception e){
+        } catch (Exception e) {
             return false;
         }
     }
 
     @Override
     public String getUsernameFromToken(String token) {
-        try{
+        try {
             Claims claims = Jwts.parser()
                     .verifyWith(getSigningKey())
                     .build()
@@ -79,7 +80,7 @@ public class TokenServiceImpl implements TokenService {
 
     @Override
     public boolean isTokenExpired(String token) {
-        try{
+        try {
             Claims claims = Jwts.parser()
                     .verifyWith(getSigningKey())
                     .build()
@@ -101,7 +102,7 @@ public class TokenServiceImpl implements TokenService {
         // Tạo refresh token
         String refreshToken = jwtTokenUtil.generateRefreshToken(userDetails);
 
-         String role = userDetails.getAuthorities().stream()
+        String role = userDetails.getAuthorities().stream()
                 .findFirst()
                 .map(auth -> auth.getAuthority().replace("ROLE_", ""))
                 .orElse("CUSTOMER");
@@ -161,7 +162,7 @@ public class TokenServiceImpl implements TokenService {
     @Override
     @Transactional
     public TokenResponseDto refreshToken(String refreshToken) {
-        try{
+        try {
             //Verify với parse token.
             Claims claims = Jwts.parser()
                     .verifyWith(getSigningKey())
@@ -171,7 +172,7 @@ public class TokenServiceImpl implements TokenService {
 
             //Kiểm tra type của token
             String type = claims.get("type", String.class);
-            if(!"refresh".equals(type)){
+            if (!"refresh".equals(type)) {
                 throw new RuntimeException("Invalid token type");
             }
 
@@ -180,9 +181,21 @@ public class TokenServiceImpl implements TokenService {
                 throw new RuntimeException("Refresh token has expired");
             }
 
+            //Lấy thông tin user từ token
+            String user = claims.getSubject();
+
+            if ("admin@gmail.com".equals(user)) {
+                // Nếu là admin, tạo JwtUser với role admin
+                JwtUser adminUser = JwtUser.builder()
+                        .id(user)
+                        .role("ADMIN")
+                        .build();
+                return generateTokens(adminUser);
+            }
+
             //Kiểm tra token có tồn tại trong database
             Token token = tokenRepository.findByRefreshToken(refreshToken);
-            if(token == null){
+            if (token == null) {
                 throw new RuntimeException("Refresh token not found!");
             }
 
@@ -191,7 +204,6 @@ public class TokenServiceImpl implements TokenService {
             }
 
             //Lấy thông tin user từ token
-            String user = claims.getSubject();
             Customer customer = customerRepository.findById(user).orElseThrow(() -> new RuntimeException("Customer not found"));
 
             JwtUser jwtUser = JwtUser.builder()
