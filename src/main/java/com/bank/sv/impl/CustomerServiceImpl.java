@@ -17,6 +17,7 @@ import com.bank.repository.CustomerRepository;
 import com.bank.repository.CustomerTypeRepository;
 import com.bank.repository.TransactionRepository;
 import com.bank.sv.CustomerService;
+import com.bank.utils.CustomerTypeUtils;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import jakarta.persistence.TypedQuery;
@@ -142,25 +143,25 @@ public class CustomerServiceImpl implements CustomerService {
     @Override
     @Transactional
     public void createCustomer(CustomerAccountRequestDto request) {
-        if(!request.getPassword().equals(request.getConfirmPassword())) {
+        if (!request.getPassword().equals(request.getConfirmPassword())) {
             throw new ValidationException(Message.INVALID_PASSWORD);
         }
 
-        if(customerRepository.existsByEmail(request.getEmail()) != null){
+        if (customerRepository.existsByEmail(request.getEmail()) != null) {
             throw new DuplicateKeyException(Message.DUPLICATED_EMAIL);
         }
 
-        if(customerRepository.existsByCitizenId(request.getCitizenId()) != null){
+        if (customerRepository.existsByCitizenId(request.getCitizenId()) != null) {
             throw new DuplicateKeyException(Message.DUPLICATED_CITIZEN);
         }
 
-        if(customerRepository.existsByPhone(request.getPhone()) != null){
+        if (customerRepository.existsByPhone(request.getPhone()) != null) {
             throw new DuplicateKeyException(Message.DUPLICATED_PHONE);
         }
 
         CustomerType customerType = customerTypeRepository.existsByName(request.getCustomerType());
 
-        if(customerType == null)
+        if (customerType == null)
             throw new ValidationException(Message.INVALID_CUS_TYPE);
 
         Customer customer = Customer.builder()
@@ -180,9 +181,10 @@ public class CustomerServiceImpl implements CustomerService {
                 .balanceType(BalanceType.LOW)
                 .status(AccountStatus.ACTIVE)
                 .balance(BigDecimal.ZERO)
-                .transactionLimit(BigDecimal.valueOf(5000000))
                 .customer(customer)
                 .build();
+        // Thiết lập hạn mức giao dịch dựa trên loại khách hàng
+        CustomerTypeUtils.setTransactionLimitBasedOnCustomerType(account);
 
         accountRepository.save(account);
     }
@@ -192,35 +194,35 @@ public class CustomerServiceImpl implements CustomerService {
     public void updateCustomer(String id, CustomerUpdateRequestDto request) {
         Customer customer = customerRepository.findById(id).orElseThrow(() -> new RuntimeException(Message.CUS_NOT_FOUND));
 
-        if(StringUtils.hasText(request.getEmail()) && !request.getEmail().equals(customer.getEmail())){
-            if(customerRepository.existsByEmail(request.getEmail()) != null){
+        if (StringUtils.hasText(request.getEmail()) && !request.getEmail().equals(customer.getEmail())) {
+            if (customerRepository.existsByEmail(request.getEmail()) != null) {
                 throw new DuplicateKeyException(Message.DUPLICATED_EMAIL);
             }
             customer.setEmail(request.getEmail());
         }
 
-        if(StringUtils.hasText(request.getPhone()) && !request.getPhone().equals(customer.getPhone())){
-            if(customerRepository.existsByPhone(request.getPhone()) != null){
+        if (StringUtils.hasText(request.getPhone()) && !request.getPhone().equals(customer.getPhone())) {
+            if (customerRepository.existsByPhone(request.getPhone()) != null) {
                 throw new DuplicateKeyException(Message.DUPLICATED_PHONE);
             }
             customer.setPhone(request.getPhone());
         }
 
-        if(StringUtils.hasText(request.getCitizenId()) && !request.getCitizenId().equals(customer.getCitizenId())){
-            if(customerRepository.existsByCitizenId(request.getCitizenId()) != null){
+        if (StringUtils.hasText(request.getCitizenId()) && !request.getCitizenId().equals(customer.getCitizenId())) {
+            if (customerRepository.existsByCitizenId(request.getCitizenId()) != null) {
                 throw new DuplicateKeyException(Message.DUPLICATED_CITIZEN);
             }
             customer.setCitizenId(request.getCitizenId());
         }
 
-        if(StringUtils.hasText(request.getAddress())){
+        if (StringUtils.hasText(request.getAddress())) {
             customer.setAddress(request.getAddress());
         }
 
-        if(StringUtils.hasText(request.getCustomerType())){
+        if (StringUtils.hasText(request.getCustomerType())) {
 
             CustomerType customerType = customerTypeRepository.existsByName(request.getCustomerType());
-            if(customerType == null){
+            if (customerType == null) {
                 throw new ValidationException(Message.INVALID_CUS_TYPE);
             }
             customer.setType(customerType);
@@ -234,16 +236,16 @@ public class CustomerServiceImpl implements CustomerService {
         int offset = paginDto.getOffset() != null ? paginDto.getOffset() : 0;
         int limit = paginDto.getLimit() != null ? paginDto.getLimit() : 10;
 
-        int pageNumber = offset/limit;
+        int pageNumber = offset / limit;
 
         //Tạo pageable
         Pageable pageable = PageRequest.of(pageNumber, limit);
 
-        Page<Object[]> customers =  customerRepository.findCustomerByLocation("%" + location + "%", pageable);
+        Page<Object[]> customers = customerRepository.findCustomerByLocation("%" + location + "%", pageable);
         List<CustomerLocationDto> result = customers.getContent().stream()
                 .map(row -> {
 
-            // Tạo CustomerLocationDto
+                    // Tạo CustomerLocationDto
                     String id = row[0].toString();         // c.id (numeric -> String)
                     String name = (String) row[1];         // c.name
                     String email = (String) row[2];        // c.email

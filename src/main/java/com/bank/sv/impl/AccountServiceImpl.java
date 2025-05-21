@@ -341,13 +341,11 @@ public class AccountServiceImpl implements AccountService {
         // Set balance type dựa trên số tiền
         String balanceStatus = BalanceTypeUtils.validateBalanceStatus(savingAccount);
         savingAccount.setBalanceType(BalanceType.valueOf(balanceStatus));
-        BalanceTypeUtils.setTransactionLimitBasedOnBalance(savingAccount);
 
         //Trừ tiền tài khoản gốc
         sourceAccount.setBalance(sourceAccount.getBalance().subtract(requestDto.getAmount()));
         String sourceBalanceStatus = BalanceTypeUtils.validateBalanceStatus(sourceAccount);
         sourceAccount.setBalanceType(BalanceType.valueOf(sourceBalanceStatus));
-        BalanceTypeUtils.setTransactionLimitBasedOnBalance(sourceAccount);
 
         // Tạo transaction cho việc tạo tài khoản tiết kiệm
 
@@ -399,7 +397,6 @@ public class AccountServiceImpl implements AccountService {
             //Cập nhật lại balance type
             String sourceBalanceStatus = BalanceTypeUtils.validateBalanceStatus(sourceAccount);
             sourceAccount.setBalanceType(BalanceType.valueOf(sourceBalanceStatus));
-            BalanceTypeUtils.setTransactionLimitBasedOnBalance(sourceAccount);
 
             //Inactive tài khoản tiết kiệm
             savingAccount.setStatus(AccountStatus.INACTIVE);
@@ -445,11 +442,9 @@ public class AccountServiceImpl implements AccountService {
                 //Cập nhật balance type
                 String sourceBalanceStatus = BalanceTypeUtils.validateBalanceStatus(sourceAccount);
                 sourceAccount.setBalanceType(BalanceType.valueOf(sourceBalanceStatus));
-                BalanceTypeUtils.setTransactionLimitBasedOnBalance(sourceAccount);
 
                 String savingBalanceStatus = BalanceTypeUtils.validateBalanceStatus(account);
                 account.setBalanceType(BalanceType.valueOf(savingBalanceStatus));
-                BalanceTypeUtils.setTransactionLimitBasedOnBalance(account);
 
                 //Tạo transaction success
                 transaction.setType(TransactionType.SAVING_DEPOSIT_SUCCESS);

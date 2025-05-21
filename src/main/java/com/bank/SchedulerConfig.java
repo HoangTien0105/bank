@@ -3,6 +3,7 @@ package com.bank;
 import com.bank.model.AdminStatistics;
 import com.bank.sv.AccountService;
 import com.bank.sv.AdminStatsService;
+import com.bank.sv.AlertService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.scheduling.annotation.EnableScheduling;
@@ -20,8 +21,11 @@ public class SchedulerConfig {
     @Autowired
     private AccountService accountService;
 
-    // Chạy vào 00:05 mỗi ngày
-    @Scheduled(cron = "0 5 0 * * ?")
+    @Autowired
+    private AlertService alertService;
+
+    // Chạy vào 00:00 mỗi ngày
+    @Scheduled(cron = "0 0 0 * * ?")
     public void generateDailyStatistics() {
         // Tạo thống kê cho ngày hôm trước
         Date yesterday = new Date(System.currentTimeMillis() - 24 * 60 * 60 * 1000);
@@ -38,5 +42,11 @@ public class SchedulerConfig {
     @Scheduled(cron = "0 0 0 * * ?")
     public void processMonthlyDeposits() {
         accountService.monthlyDeposit();
+    }
+
+    // Thêm lịch trình kiểm tra giao dịch bất thường mỗi 15 phút
+    @Scheduled(cron = "0 0 * * * ?")
+    public void detectAbnormalTransactions() {
+        alertService.detectAbnormalTransactions();
     }
 }

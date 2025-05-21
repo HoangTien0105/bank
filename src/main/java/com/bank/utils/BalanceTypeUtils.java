@@ -1,14 +1,18 @@
 package com.bank.utils;
 
+import com.bank.constant.Value;
 import com.bank.model.Account;
+import com.bank.model.Customer;
+import com.bank.model.CustomerType;
 
 import java.math.BigDecimal;
 
 public class BalanceTypeUtils {
+
     public static String validateBalanceStatus(Account account) {
         BigDecimal balance = account.getBalance();
-        BigDecimal fiveMillion = new BigDecimal("5000000"); // 5 triệu
-        BigDecimal fiftyMillion = new BigDecimal("50000000"); // 50 triệu
+        BigDecimal fiveMillion = Value.FIVE_MILLION; // 5 triệu
+        BigDecimal fiftyMillion = Value.FIFTY_MILLION; // 50 triệu
 
         if (balance.compareTo(fiveMillion) < 0) {
             return "LOW";
@@ -16,25 +20,6 @@ public class BalanceTypeUtils {
             return "MEDIUM";
         } else {
             return "HIGH";
-        }
-    }
-
-    public static void setTransactionLimitBasedOnBalance(Account account) {
-        BigDecimal fiveMillion = new BigDecimal("5000000"); // 5 triệu
-        BigDecimal fiftyMillion = new BigDecimal("50000000"); // 50 triệu
-        BigDecimal hundredMillion = new BigDecimal("100000000"); // 100 triệu
-
-        String status = validateBalanceStatus(account);
-        switch (status) {
-            case "LOW":
-                account.setTransactionLimit(fiveMillion);
-                break;
-            case "MEDIUM":
-                account.setTransactionLimit(fiftyMillion);
-                break;
-            case "HIGH":
-                account.setTransactionLimit(hundredMillion);
-                break;
         }
     }
 }

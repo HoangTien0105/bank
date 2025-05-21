@@ -18,9 +18,8 @@ public interface TransactionRepository extends JpaRepository<Transaction, String
     @Query("SELECT t FROM Transaction t ORDER BY t.transactionDate DESC")
     Page<Transaction> findAllTransactionOrderByDate(Pageable pageable);
 
-    List<Transaction> findByAccountAndTypeInOrderByCreateDateAsc(Account account, List<TransactionType> types);
-
     Transaction findFirstByAccountAndTypeOrderByTransactionDateAsc(Account account, TransactionType type);
+
     List<Transaction> findByAccountAndTypeOrderByTransactionDateAsc(Account account, TransactionType type);
 
     @Query("SELECT COUNT(t) FROM Transaction t WHERE t.transactionDate BETWEEN :startDate AND :endDate")
@@ -34,4 +33,8 @@ public interface TransactionRepository extends JpaRepository<Transaction, String
 
     @Query("SELECT MIN(t.amount) FROM Transaction t WHERE t.transactionDate BETWEEN :startDate AND :endDate")
     BigDecimal getMinAmountOfTransferByDate(Date startDate, Date endDate);
+
+    List<Transaction> findAllByTransactionDateBetween(Date startDate, Date endDate);
+
+    List<Transaction> findByAccountAndTransactionDateBetween(Account account, Date startDate, Date endDate);
 }

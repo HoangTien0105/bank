@@ -29,4 +29,9 @@ public interface Message {
 
     //Validate token
     String TOKEN_NOT_FOUND = "Token not found!";
+
+    //Validate alert
+    String ALERT_NOT_FOUND = "Alert not found";
+    String ALERT_STATUS_REQUIRED = "Alert status is required";
+    String ALERT_STATUS_INVALID = "Invalid alert status";
 }

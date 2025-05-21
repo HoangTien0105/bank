@@ -14,6 +14,7 @@ import com.bank.model.Account;
 import com.bank.model.Transaction;
 import com.bank.repository.AccountRepository;
 import com.bank.repository.TransactionRepository;
+import com.bank.sv.AlertService;
 import com.bank.sv.TransactionService;
 import com.bank.utils.BalanceTypeUtils;
 import jakarta.persistence.EntityManager;
@@ -43,6 +44,9 @@ public class TransactionServiceImpl implements TransactionService {
 
     @Autowired
     private AccountRepository accountRepository;
+
+    @Autowired
+    private AlertService alertService;
 
     @PersistenceContext
     private EntityManager entityManager;
@@ -221,10 +225,8 @@ public class TransactionServiceImpl implements TransactionService {
 
         // Update status and transaction limit
         fromAccount.setBalanceType(BalanceType.valueOf(BalanceTypeUtils.validateBalanceStatus(fromAccount)));
-        BalanceTypeUtils.setTransactionLimitBasedOnBalance(fromAccount);
 
         toAccount.setBalanceType(BalanceType.valueOf(BalanceTypeUtils.validateBalanceStatus(toAccount)));
-        BalanceTypeUtils.setTransactionLimitBasedOnBalance(toAccount);
 
         if (description == null) {
             description = "Transfer from " + fromAccountId + " to " + toAccountId;
@@ -254,6 +256,10 @@ public class TransactionServiceImpl implements TransactionService {
         // Save accounts
         accountRepository.save(fromAccount);
         accountRepository.save(toAccount);
+
+        // Kiểm tra giao dịch bất thường
+        alertService.isTransactionAbnormal(fromTransaction);
+        alertService.isTransactionAbnormal(toTransaction);
     }
 
     @Override
@@ -274,7 +280,6 @@ public class TransactionServiceImpl implements TransactionService {
         account.setBalance(account.getBalance().add(amount));
 
         account.setBalanceType(BalanceType.valueOf(BalanceTypeUtils.validateBalanceStatus(account)));
-        BalanceTypeUtils.setTransactionLimitBasedOnBalance(account);
 
         Date transactionDate = Date.from(LocalDateTime.now().atZone(ZoneId.systemDefault()).toInstant());
 
@@ -286,6 +291,9 @@ public class TransactionServiceImpl implements TransactionService {
         transaction.setLocation(request.getLocation());
         transaction.setDescription("Deposit money into wallet");
         transactionRepository.save(transaction);
+
+        // Kiểm tra giao dịch bất thường
+        alertService.isTransactionAbnormal(transaction);
     }
 
     @Override
@@ -310,7 +318,6 @@ public class TransactionServiceImpl implements TransactionService {
         account.setBalance(account.getBalance().subtract(amount));
 
         account.setBalanceType(BalanceType.valueOf(BalanceTypeUtils.validateBalanceStatus(account)));
-        BalanceTypeUtils.setTransactionLimitBasedOnBalance(account);
 
         Date transactionDate = Date.from(LocalDateTime.now().atZone(ZoneId.systemDefault()).toInstant());
 
@@ -322,5 +329,8 @@ public class TransactionServiceImpl implements TransactionService {
         transaction.setLocation(request.getLocation());
         transaction.setDescription("Withdraw money from wallet");
         transactionRepository.save(transaction);
+
+        // Kiểm tra giao dịch bất thường
+        alertService.isTransactionAbnormal(transaction);
     }
 }
