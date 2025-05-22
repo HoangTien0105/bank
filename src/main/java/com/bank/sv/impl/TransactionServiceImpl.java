@@ -300,8 +300,10 @@ public class TransactionServiceImpl implements TransactionService {
         accountRepository.save(toAccount);
 
         // Kiểm tra giao dịch bất thường
-        alertService.isTransactionAbnormal(fromTransaction);
-        alertService.isTransactionAbnormal(toTransaction);
+        Thread.startVirtualThread(() -> {
+            alertService.isTransactionAbnormal(fromTransaction);
+            alertService.isTransactionAbnormal(toTransaction);
+        });
     }
 
     @Override
@@ -335,7 +337,9 @@ public class TransactionServiceImpl implements TransactionService {
         transactionRepository.save(transaction);
 
         // Kiểm tra giao dịch bất thường
-        alertService.isTransactionAbnormal(transaction);
+        Thread.startVirtualThread(() -> {
+            alertService.isTransactionAbnormal(transaction);
+        });
     }
 
     @Override
@@ -373,6 +377,8 @@ public class TransactionServiceImpl implements TransactionService {
         transactionRepository.save(transaction);
 
         // Kiểm tra giao dịch bất thường
-        alertService.isTransactionAbnormal(transaction);
+        Thread.startVirtualThread(() -> {
+            alertService.isTransactionAbnormal(transaction);
+        });
     }
 }

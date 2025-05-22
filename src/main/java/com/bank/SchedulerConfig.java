@@ -34,34 +34,43 @@ public class SchedulerConfig {
     public void generateDailyStatistics() {
         // Tạo thống kê cho ngày hôm trước
         Date yesterday = new Date(System.currentTimeMillis() - 24 * 60 * 60 * 1000);
-        adminStatsService.generateStatisticsForDate(yesterday);
+        Thread.startVirtualThread(() -> {
+            adminStatsService.generateStatisticsForDate(yesterday);
+        });
     }
 
     // Chạy vào 00:00 mỗi ngày để xử lý tài khoản tiết kiệm đến hạn
     @Scheduled(cron = "0 0 0 * * ?")
     public void processSavingAccounts() {
-        accountService.processSavingAccount();
+        Thread.startVirtualThread(() -> {
+            accountService.processSavingAccount();
+        });
     }
 
     // Chạy vào 00:00 mỗi ngày để xử lý nạp tiền hàng tháng
     @Scheduled(cron = "0 0 0 * * ?")
     public void processMonthlyDeposits() {
-        accountService.monthlyDeposit();
+        Thread.startVirtualThread(() -> {
+            accountService.monthlyDeposit();
+        });
     }
 
     // Thêm lịch trình kiểm tra giao dịch bất thường mỗi 1 tiếng
     @Scheduled(cron = "0 0 * * * ?")
     public void detectAbnormalTransactions() {
-        alertService.detectAbnormalTransactions();
+        Thread.startVirtualThread(() -> {
+            alertService.detectAbnormalTransactions();
+        });
     }
 
     @Scheduled(cron = "0 0 0 1 * ?")
-    public void generateMonthlyCustomerStats(){
+    public void generateMonthlyCustomerStats() {
         LocalDateTime now = LocalDateTime.now();
         LocalDateTime lastMonth = now.minusMonths(1);
         int year = lastMonth.getYear();
         int month = lastMonth.getMonthValue();
-
-        customerStatsService.generateStatsForMonth(year, month);
+        Thread.startVirtualThread(() -> {
+            customerStatsService.generateStatsForMonth(year, month);
+        });
     }
 }

@@ -67,9 +67,11 @@ public class AlertServiceImpl implements AlertService {
         for (Transaction transaction : transactions) {
             // Kiểm tra xem giao dịch đã được cảnh báo chưa
             if (!alertRepository.existsByTransactionId(transaction.getId())) {
-                if (isTransactionAbnormal(transaction)) {
-                    // Đã được xử lý trong phương thức isTransactionAbnormal
-                }
+                Thread.startVirtualThread(() -> {
+                    if (isTransactionAbnormal(transaction)) {
+                        // Đã được xử lý trong phương thức isTransactionAbnormal
+                    }
+                });
             }
         }
     }
