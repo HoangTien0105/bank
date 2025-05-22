@@ -34,6 +34,7 @@ import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.Date;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @Service
@@ -52,38 +53,48 @@ public class TransactionServiceImpl implements TransactionService {
     private EntityManager entityManager;
 
     @Override
-    @Cacheable(value = "transactions",key = "#paginDto.toString() + '_' + #customerId + '_' + #role")
+    @Cacheable(value = "transactions", key = "#paginDto.toString() + '_' + #customerId + '_' + #role")
     public PaginDto<TransactionResponseDto> getTransactions(PaginDto<TransactionResponseDto> paginDto, String customerId, String role) {
-
         int offset = paginDto.getOffset() != null ? paginDto.getOffset() : 0;
         int limit = paginDto.getLimit() != null ? paginDto.getLimit() : 10;
-
         String keyword = paginDto.getKeyword();
-
+        Map<String, Object> options = paginDto.getOptions();
         int pageNumber = offset / limit;
 
-        String jpql;
-        TypedQuery<Transaction> query;
+        // Build main query
+        StringBuilder jpqlBuilder = new StringBuilder("SELECT t FROM Transaction t");
 
-        if ("ADMIN".equals(role)) {
-            // Admin can see all transactions
-            jpql = "SELECT t FROM Transaction t WHERE " +
-                    "(:keyword IS NULL OR " +
-                    "LOWER(t.description) LIKE :searchPattern OR " +
-                    "LOWER(t.type) LIKE :searchPattern OR " +
-                    "LOWER(t.location) LIKE :searchPattern)";
-
-            query = entityManager.createQuery(jpql, Transaction.class);
+        if (!"ADMIN".equals(role)) {
+            jpqlBuilder.append(" WHERE t.account IN (SELECT a FROM Account a WHERE a.customer.id = :customerId) AND ");
         } else {
-            // Regular customers can only see their own transactions
-            jpql = "SELECT t FROM Transaction t WHERE t.account IN " +
-                    "(SELECT a FROM Account a WHERE a.customer.id = :customerId) AND " +
-                    "(:keyword IS NULL OR " +
-                    "LOWER(t.description) LIKE :searchPattern OR " +
-                    "LOWER(t.type) LIKE :searchPattern OR " +
-                    "LOWER(t.location) LIKE :searchPattern)";
+            jpqlBuilder.append(" WHERE ");
+        }
 
-            query = entityManager.createQuery(jpql, Transaction.class);
+        jpqlBuilder.append("(:keyword IS NULL OR ")
+                .append("LOWER(t.description) LIKE :searchPattern OR ")
+                .append("LOWER(t.type) LIKE :searchPattern OR ")
+                .append("LOWER(t.location) LIKE :searchPattern)");
+
+        // Add location filter if provided
+        if (options != null && options.containsKey("location")) {
+            jpqlBuilder.append(" AND LOWER(t.location) LIKE :locationPattern");
+        }
+
+        // Add sorting if provided
+        if (options != null && options.containsKey("sortBy")) {
+            String sortBy = (String) options.get("sortBy");
+            String sortDirection = (String) options.getOrDefault("sortDirection", "ASC");
+
+            if (isValidTransactionSortField(sortBy)) {
+                jpqlBuilder.append(" ORDER BY t.").append(sortBy).append(" ").append(sortDirection);
+            }
+        } else {
+            jpqlBuilder.append(" ORDER BY t.transactionDate DESC"); // default sort by date
+        }
+
+        TypedQuery<Transaction> query = entityManager.createQuery(jpqlBuilder.toString(), Transaction.class);
+
+        if (!"ADMIN".equals(role)) {
             query.setParameter("customerId", customerId);
         }
 
@@ -96,32 +107,53 @@ public class TransactionServiceImpl implements TransactionService {
             query.setParameter("searchPattern", null);
         }
 
-        // Set pagination
-        query.setFirstResult(pageNumber * limit);
-        query.setMaxResults(limit);
+        if (options != null && options.containsKey("location")) {
+            String location = (String) options.get("location");
+            query.setParameter("locationPattern", "%" + location.toLowerCase() + "%");
+        }
 
-        List<Transaction> transactions = query.getResultList();
+        List<Transaction> transactions = query
+                .setFirstResult(pageNumber * limit)
+                .setMaxResults(limit)
+                .getResultList();
 
-        String countJpql = jpql.replace("SELECT t", "SELECT COUNT(t)");
+        // Build count query
+        StringBuilder countJpqlBuilder = new StringBuilder("SELECT COUNT(t) FROM Transaction t");
 
-        TypedQuery<Long> countQuery = entityManager.createQuery(countJpql, Long.class);
-        if ("ADMIN".equals(role)) {
-            if (StringUtils.hasText(paginDto.getKeyword())) {
-                countQuery.setParameter("keyword", paginDto.getKeyword());
-                countQuery.setParameter("searchPattern", "%" + paginDto.getKeyword().toLowerCase() + "%");
-            } else {
-                countQuery.setParameter("keyword", null);
-                countQuery.setParameter("searchPattern", null);
-            }
+        if (!"ADMIN".equals(role)) {
+            countJpqlBuilder.append(" WHERE t.account IN (SELECT a FROM Account a WHERE a.customer.id = :customerId) AND ");
         } else {
+            countJpqlBuilder.append(" WHERE ");
+        }
+
+        countJpqlBuilder.append("(:keyword IS NULL OR ")
+                .append("LOWER(t.description) LIKE :searchPattern OR ")
+                .append("LOWER(t.type) LIKE :searchPattern OR ")
+                .append("LOWER(t.location) LIKE :searchPattern)");
+
+        // Add location filter for count query too
+        if (options != null && options.containsKey("location")) {
+            countJpqlBuilder.append(" AND LOWER(t.location) LIKE :locationPattern");
+        }
+
+        TypedQuery<Long> countQuery = entityManager.createQuery(countJpqlBuilder.toString(), Long.class);
+
+        if (!"ADMIN".equals(role)) {
             countQuery.setParameter("customerId", customerId);
-            if (StringUtils.hasText(paginDto.getKeyword())) {
-                countQuery.setParameter("keyword", paginDto.getKeyword());
-                countQuery.setParameter("searchPattern", "%" + paginDto.getKeyword().toLowerCase() + "%");
-            } else {
-                countQuery.setParameter("keyword", null);
-                countQuery.setParameter("searchPattern", null);
-            }
+        }
+
+        if (StringUtils.hasText(keyword)) {
+            String searchPattern = "%" + keyword.toLowerCase() + "%";
+            countQuery.setParameter("keyword", keyword);
+            countQuery.setParameter("searchPattern", searchPattern);
+        } else {
+            countQuery.setParameter("keyword", null);
+            countQuery.setParameter("searchPattern", null);
+        }
+
+        if (options != null && options.containsKey("location")) {
+            String location = (String) options.get("location");
+            countQuery.setParameter("locationPattern", "%" + location.toLowerCase() + "%");
         }
 
         Long totalRows = countQuery.getSingleResult();
@@ -138,6 +170,16 @@ public class TransactionServiceImpl implements TransactionService {
         paginDto.setTotalPages((int) Math.ceil((double) totalRows / limit));
 
         return paginDto;
+    }
+
+    private boolean isValidTransactionSortField(String sortBy) {
+        return sortBy != null && (
+                sortBy.equals("amount") ||
+                        sortBy.equals("type") ||
+                        sortBy.equals("transactionDate") ||
+                        sortBy.equals("location") ||
+                        sortBy.equals("description")
+        );
     }
 
     @Override
@@ -178,7 +220,7 @@ public class TransactionServiceImpl implements TransactionService {
         String toAccountId = request.getToAccountId();
         String description = request.getDescription();
 
-        if(fromAccountId.equals(toAccountId)){
+        if (fromAccountId.equals(toAccountId)) {
             throw new RuntimeException("Account can't be the same");
         }
 
@@ -187,15 +229,15 @@ public class TransactionServiceImpl implements TransactionService {
         Account toAccount = accountRepository.findById(toAccountId)
                 .orElseThrow(() -> new RuntimeException("To account does not exists"));
 
-        if(!fromAccount.getCustomer().getId().equals(customerId)){
+        if (!fromAccount.getCustomer().getId().equals(customerId)) {
             throw new RuntimeException("This account does not belong to this customers");
         }
 
-        if(fromAccount.getStatus() != AccountStatus.ACTIVE){
+        if (fromAccount.getStatus() != AccountStatus.ACTIVE) {
             throw new RuntimeException("Source account must be active");
         }
 
-        if(toAccount.getStatus() != AccountStatus.ACTIVE){
+        if (toAccount.getStatus() != AccountStatus.ACTIVE) {
             throw new RuntimeException("Destination account must be active");
         }
 
@@ -267,11 +309,11 @@ public class TransactionServiceImpl implements TransactionService {
     public void depositMoney(MoneyUpdateRequest request, String customerId) {
         Account account = accountRepository.findById(request.getAccountId()).orElseThrow(() -> new RuntimeException("Account not found"));
 
-        if(!account.getCustomer().getId().equals(customerId)){
+        if (!account.getCustomer().getId().equals(customerId)) {
             throw new RuntimeException("This account does not belong to this customers");
         }
 
-        if(account.getStatus() != AccountStatus.ACTIVE){
+        if (account.getStatus() != AccountStatus.ACTIVE) {
             throw new RuntimeException("Account must be active");
         }
 
@@ -301,11 +343,11 @@ public class TransactionServiceImpl implements TransactionService {
     public void withdrawMoney(MoneyUpdateRequest request, String customerId) {
         Account account = accountRepository.findById(request.getAccountId()).orElseThrow(() -> new RuntimeException("Account not found"));
 
-        if(!account.getCustomer().getId().equals(customerId)){
+        if (!account.getCustomer().getId().equals(customerId)) {
             throw new RuntimeException("This account does not belong to this customers");
         }
 
-        if(account.getStatus() != AccountStatus.ACTIVE){
+        if (account.getStatus() != AccountStatus.ACTIVE) {
             throw new RuntimeException("Account must be active");
         }
 

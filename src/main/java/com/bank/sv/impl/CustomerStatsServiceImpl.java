@@ -13,6 +13,7 @@ import com.bank.repository.TransactionRepository;
 import com.bank.sv.CustomerStatsService;
 import com.bank.utils.ExcelUtils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -122,6 +123,7 @@ public class CustomerStatsServiceImpl implements CustomerStatsService {
     }
 
     @Override
+    @Cacheable(value = "customers_stats", key = "#customers_stats")
     public List<CustomerStatsResponseDto> getStatsForCustomer(String cusId, Date startDate, Date endDate) {
         LocalDate startLocalDate = startDate.toInstant().atZone(ZoneId.of("Asia/Ho_Chi_Minh")).toLocalDate();
         LocalDate endLocalDate = endDate.toInstant().atZone(ZoneId.of("Asia/Ho_Chi_Minh")).toLocalDate();

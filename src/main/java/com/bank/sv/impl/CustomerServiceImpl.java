@@ -23,6 +23,7 @@ import jakarta.persistence.PersistenceContext;
 import jakarta.persistence.TypedQuery;
 import jakarta.validation.ValidationException;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.data.domain.Page;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -34,6 +35,7 @@ import org.springframework.util.StringUtils;
 
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @Service
@@ -58,6 +60,7 @@ public class CustomerServiceImpl implements CustomerService {
     private EntityManager entityManager;
 
     @Override
+    @Cacheable(value = "customers", key = "#paginDto.toString() + '_' + #customerId + '_' + #role")
     public PaginDto<CustomerDto> getCustomers(PaginDto<CustomerDto> paginDto) {
 
         // Init các biến bắt đầu và giới hạn phần tử trong trang
@@ -65,19 +68,37 @@ public class CustomerServiceImpl implements CustomerService {
         int offset = paginDto.getOffset() != null ? paginDto.getOffset() : 0;
         int limit = paginDto.getLimit() != null ? paginDto.getLimit() : 10;
 
-        //Nếu có filter
+        //Nếu có search
         String keyword = paginDto.getKeyword();
+        Map<String, Object> options = paginDto.getOptions();
 
         int pageNumber = offset / limit;
 
-        String jpql = "SELECT c FROM Customer c WHERE " +
-                "(:keyword IS NULL OR " +
-                "LOWER(c.name) LIKE :searchPattern OR " +
-                "LOWER(c.phone) LIKE :searchPattern OR " +
-                "LOWER(c.email) LIKE :searchPattern)";
+        StringBuilder jpql = new StringBuilder(
+                "SELECT DISTINCT c FROM Customer c " +
+                        "LEFT JOIN Transaction t ON t.account = a " +
+                        "WHERE (:keyword IS NULL OR " +
+                        "LOWER(c.name) LIKE :searchPattern OR " +
+                        "LOWER(c.phone) LIKE :searchPattern OR " +
+                        "LOWER(c.email) LIKE :searchPattern)"
+        );
+
+        if (options != null && options.containsKey("location")) {
+            jpql.append(" AND LOWER(t.location) LIKE :locationPattern");
+        }
 
 
-        TypedQuery<Customer> query = entityManager.createQuery(jpql, Customer.class);
+        if (options != null && options.containsKey("sortBy")) {
+            String sortBy = (String) options.get("sortBy");
+            String sortDirection = (String) options.getOrDefault("sortDirection", "ASC");
+
+            // Validate sortBy field
+            if (isValidSortField(sortBy)) {
+                jpql.append(" ORDER BY c.").append(sortBy).append(" ").append(sortDirection);
+            }
+        }
+
+        TypedQuery<Customer> query = entityManager.createQuery(jpql.toString(), Customer.class);
 
         //Lấy customers
         if (StringUtils.hasText(keyword)) {
@@ -89,18 +110,33 @@ public class CustomerServiceImpl implements CustomerService {
             query.setParameter("searchPattern", null);
         }
 
+        if (options != null && options.containsKey("location")) {
+            String location = (String) options.get("location");
+            query.setParameter("locationPattern", "%" + location.toLowerCase() + "%");
+        }
+
+
         List<Customer> customers = query
                 .setFirstResult(offset)
                 .setMaxResults(limit)
                 .getResultList();
 
         //Tạo truy vấn đếm số dòng
-        String countJpql = "SELECT COUNT(c) FROM Customer c WHERE " +
-                "(:keyword IS NULL OR " +
-                "LOWER(c.name) LIKE :searchPattern OR " +
-                "LOWER(c.phone) LIKE :searchPattern OR " +
-                "LOWER(c.email) LIKE :searchPattern)";
-        TypedQuery<Long> countQuery = entityManager.createQuery(countJpql, Long.class);
+        StringBuilder countJpql = new StringBuilder(
+                "SELECT COUNT(DISTINCT c) FROM Customer c " +
+                        "LEFT JOIN Account a ON a.customer = c " +
+                        "LEFT JOIN Transaction t ON t.account = a " +
+                        "WHERE (:keyword IS NULL OR " +
+                        "LOWER(c.name) LIKE :searchPattern OR " +
+                        "LOWER(c.phone) LIKE :searchPattern OR " +
+                        "LOWER(c.email) LIKE :searchPattern)"
+        );
+
+        if (options != null && options.containsKey("location")) {
+            countJpql.append(" AND LOWER(t.location) LIKE :locationPattern");
+        }
+
+        TypedQuery<Long> countQuery = entityManager.createQuery(countJpql.toString(), Long.class);
 
         if (StringUtils.hasText(keyword)) {
             String searchPattern = "%" + keyword.toLowerCase() + "%";
@@ -109,6 +145,11 @@ public class CustomerServiceImpl implements CustomerService {
         } else {
             countQuery.setParameter("keyword", null);
             countQuery.setParameter("searchPattern", null);
+        }
+
+        if (options != null && options.containsKey("location")) {
+            String location = (String) options.get("location");
+            countQuery.setParameter("locationPattern", "%" + location.toLowerCase() + "%");
         }
 
         Long totalRows = countQuery.getSingleResult();
@@ -277,5 +318,16 @@ public class CustomerServiceImpl implements CustomerService {
         response.setResults(result);
 
         return response;
+    }
+
+    private boolean isValidSortField(String sortBy) {
+        return sortBy != null && (
+                sortBy.equals("name") ||
+                        sortBy.equals("email") ||
+                        sortBy.equals("phone") ||
+                        sortBy.equals("citizenId") ||
+                        sortBy.equals("createdAt") ||
+                        sortBy.equals("createDate")
+        );
     }
 }

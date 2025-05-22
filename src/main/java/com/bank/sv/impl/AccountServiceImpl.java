@@ -96,28 +96,41 @@ public class AccountServiceImpl implements AccountService {
         int limit = paginDto.getLimit() != null ? paginDto.getLimit() : 10;
 
         String keyword = paginDto.getKeyword();
+        Map<String, Object> options = paginDto.getOptions();
 
         int pageNumber = offset / limit;
 
-        String jpql;
-        TypedQuery<Account> query;
+        StringBuilder jpql = new StringBuilder("SELECT a FROM Account a");
 
         if ("ADMIN".equals(role)) {
-            jpql = "SELECT a FROM Account a WHERE " +
-                    "(:keyword IS NULL OR " +
-                    "LOWER(a.status) LIKE :searchPattern OR " +
-                    "LOWER(a.type) LIKE :searchPattern)";
+            jpql.append(" JOIN a.customer c");
+        }
 
-            query = entityManager.createQuery(jpql, Account.class);
-        } else {
-            jpql = "SELECT a FROM Account a JOIN a.customer c WHERE " +
-                    "c.id = :customerId AND " +
-                    "(a.status = ACTIVE AND a.type = SAVING) AND " +
-                    "(:keyword IS NULL OR " +
-                    "LOWER(a.status) LIKE :searchPattern OR " +
-                    "LOWER(a.type) LIKE :searchPattern)";
+        jpql.append(" WHERE ");
 
-            query = entityManager.createQuery(jpql, Account.class);
+        if (!"ADMIN".equals(role)) {
+            jpql.append("c.id = :customerId AND (a.status = 'ACTIVE' AND a.type = 'SAVING') AND ");
+        }
+
+        jpql.append("(:keyword IS NULL OR ")
+                .append("LOWER(a.status) LIKE :searchPattern OR ")
+                .append("LOWER(a.type) LIKE :searchPattern)");
+
+        if (options != null && options.containsKey("balanceType")) {
+            jpql.append(" AND LOWER(a.balanceType) LIKE :balanceTypePattern");
+        }
+
+        if (options != null && options.containsKey("sortBy")) {
+            String sortBy = (String) options.get("sortBy");
+            String sortDirection = (String) options.getOrDefault("sortDirection", "ASC");
+
+            if (isValidAccountSortField(sortBy)) {
+                jpql.append(" ORDER BY a.").append(sortBy).append(" ").append(sortDirection);
+            }
+        }
+        TypedQuery<Account> query = entityManager.createQuery(jpql.toString(), Account.class);
+
+        if (!"ADMIN".equals(role)) {
             query.setParameter("customerId", customerId);
         }
 
@@ -130,30 +143,48 @@ public class AccountServiceImpl implements AccountService {
             query.setParameter("searchPattern", null);
         }
 
+        if (options != null && options.containsKey("balanceType")) {
+            String balanceType = (String) options.get("balanceType");
+            query.setParameter("balanceTypePattern", "%" + balanceType.toLowerCase() + "%");
+        }
+
         List<Account> accounts = query
                 .setFirstResult(offset)
                 .setMaxResults(limit)
                 .getResultList();
 
-        String countJpql;
-        TypedQuery<Long> countQuery;
+        StringBuilder countJpqlBuilder = new StringBuilder("SELECT COUNT(a) FROM Account a");
 
-        if ("ADMIN".equals(role)) {
-            countJpql = "SELECT COUNT(a) FROM Account a WHERE " +
-                    "(:keyword IS NULL OR " +
-                    "LOWER(a.status) LIKE :searchPattern OR " +
-                    "LOWER(a.type) LIKE :searchPattern)";
+        if (!"ADMIN".equals(role)) {
+            countJpqlBuilder.append(" JOIN a.customer c");
+        }
 
-            countQuery = entityManager.createQuery(countJpql, Long.class);
-        } else {
-            countJpql = "SELECT COUNT(a) FROM Account a JOIN a.customer c WHERE " +
-                    "c.id = :customerId AND " +
-                    "(a.status = ACTIVE AND a.type = SAVING) AND " +
-                    "(:keyword IS NULL OR " +
-                    "LOWER(a.status) LIKE :searchPattern OR " +
-                    "LOWER(a.type) LIKE :searchPattern)";
+        countJpqlBuilder.append(" WHERE ");
 
-            countQuery = entityManager.createQuery(countJpql, Long.class);
+        if (!"ADMIN".equals(role)) {
+            countJpqlBuilder.append("c.id = :customerId AND (a.status = 'ACTIVE' AND a.type = 'SAVING') AND ");
+        }
+
+        countJpqlBuilder.append("(:keyword IS NULL OR ")
+                .append("LOWER(a.status) LIKE :searchPattern OR ")
+                .append("LOWER(a.type) LIKE :searchPattern)");
+
+        if (options != null && options.containsKey("balanceType")) {
+            countJpqlBuilder.append(" AND LOWER(a.balanceType) LIKE :balanceTypePattern");
+        }
+
+        if (options != null && options.containsKey("sortBy")) {
+            String sortBy = (String) options.get("sortBy");
+            String sortDirection = (String) options.getOrDefault("sortDirection", "ASC");
+
+            if (isValidAccountSortField(sortBy)) {
+                countJpqlBuilder.append(" ORDER BY a.").append(sortBy).append(" ").append(sortDirection);
+            }
+        }
+
+        TypedQuery<Long> countQuery = entityManager.createQuery(countJpqlBuilder.toString(), Long.class);
+
+        if (!"ADMIN".equals(role)) {
             countQuery.setParameter("customerId", customerId);
         }
 
@@ -164,6 +195,11 @@ public class AccountServiceImpl implements AccountService {
         } else {
             countQuery.setParameter("keyword", null);
             countQuery.setParameter("searchPattern", null);
+        }
+
+        if (options != null && options.containsKey("balanceType")) {
+            String balanceType = (String) options.get("balanceType");
+            countQuery.setParameter("balanceTypePattern", "%" + balanceType.toLowerCase() + "%");
         }
 
         Long totalRows = countQuery.getSingleResult();
@@ -520,5 +556,15 @@ public class AccountServiceImpl implements AccountService {
             }
         }
         return totalInterest.setScale(2, RoundingMode.HALF_UP);
+    }
+
+    private boolean isValidAccountSortField(String sortBy) {
+        return sortBy != null && (
+                sortBy.equals("balance") ||
+                        sortBy.equals("type") ||
+                        sortBy.equals("status") ||
+                        sortBy.equals("createDate") ||
+                        sortBy.equals("maturityDate")
+        );
     }
 }

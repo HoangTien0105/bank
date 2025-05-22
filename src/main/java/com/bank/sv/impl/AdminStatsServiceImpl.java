@@ -12,6 +12,7 @@ import com.bank.utils.ExcelUtils;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -101,6 +102,7 @@ public class AdminStatsServiceImpl implements AdminStatsService {
     }
 
     @Override
+    @Cacheable(value = "admin_date_stats", key = "#admin_date_stats")
     public List<AdminStatistics> getStatisticsForDateRange(Date startDate, Date endDate) {
         // Chuyển đổi Date thành LocalDateTime
         LocalDateTime start = startDate.toInstant().atZone(ZoneId.of("Asia/Ho_Chi_Minh")).toLocalDateTime().withHour(0).withMinute(0).withSecond(0).withNano(0);
@@ -119,6 +121,7 @@ public class AdminStatsServiceImpl implements AdminStatsService {
     }
 
     @Override
+    @Cacheable(value = "admin_week_stats", key = "#admin_week_stats")
     public Map<String, Object> getStatisticsForWeek(Date date) {
         //Biến Date thành LocalDate
         LocalDateTime localDate = date.toInstant().atZone(ZoneId.of("Asia/Ho_Chi_Minh")).toLocalDateTime();
@@ -195,6 +198,7 @@ public class AdminStatsServiceImpl implements AdminStatsService {
     }
 
     @Override
+    @Cacheable(value = "admin_quarter_stats", key = "#admin_quarter_stats")
     public Map<String, Object> getStatisticsForQuarter(int quarter, int year) {
         if (quarter < 1 || quarter > 4) {
             throw new IllegalArgumentException(Message.QUARTER_INVALID);
@@ -278,6 +282,7 @@ public class AdminStatsServiceImpl implements AdminStatsService {
     }
 
     @Override
+    @Cacheable(value = "admin_year_stats", key = "#admin_year_stats")
     public Map<String, Object> getStatisticsForYear(int year) {
         // Ngày bắt đầu, kết thúc của năm
         LocalDateTime startOfYear = LocalDateTime.of(year, 1, 1, 0, 0, 0);
