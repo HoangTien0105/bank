@@ -12,6 +12,7 @@ import org.springframework.scheduling.annotation.Scheduled;
 
 import java.time.LocalDateTime;
 import java.util.Date;
+import java.util.concurrent.CompletableFuture;
 
 @Configuration
 @EnableScheduling
@@ -34,32 +35,52 @@ public class SchedulerConfig {
     public void generateDailyStatistics() {
         // Tạo thống kê cho ngày hôm trước
         Date yesterday = new Date(System.currentTimeMillis() - 24 * 60 * 60 * 1000);
-        Thread.startVirtualThread(() -> {
-            adminStatsService.generateStatisticsForDate(yesterday);
+        CompletableFuture.runAsync(() -> { //	Chạy task bất đồng bộ không trả kết quả
+            try {
+                adminStatsService.generateStatisticsForDate(yesterday);
+            } catch (Exception e) {
+                // Log lỗi
+                System.err.println("Error generating statistics: " + e.getMessage());
+            }
         });
     }
 
     // Chạy vào 00:00 mỗi ngày để xử lý tài khoản tiết kiệm đến hạn
     @Scheduled(cron = "0 0 0 * * ?")
     public void processSavingAccounts() {
-        Thread.startVirtualThread(() -> {
-            accountService.processSavingAccount();
+        CompletableFuture.runAsync(() -> {
+            try {
+                accountService.processSavingAccount();
+            } catch (Exception e) {
+                // Log lỗi
+                System.err.println("Error processing saving accounts: " + e.getMessage());
+            }
         });
     }
 
     // Chạy vào 00:00 mỗi ngày để xử lý nạp tiền hàng tháng
     @Scheduled(cron = "0 0 0 * * ?")
     public void processMonthlyDeposits() {
-        Thread.startVirtualThread(() -> {
-            accountService.monthlyDeposit();
+        CompletableFuture.runAsync(() -> {
+            try {
+                accountService.monthlyDeposit();
+            } catch (Exception e) {
+                // Log lỗi
+                System.err.println("Error processing monthly deposits: " + e.getMessage());
+            }
         });
     }
 
     // Thêm lịch trình kiểm tra giao dịch bất thường mỗi 1 tiếng
     @Scheduled(cron = "0 0 * * * ?")
     public void detectAbnormalTransactions() {
-        Thread.startVirtualThread(() -> {
-            alertService.detectAbnormalTransactions();
+        CompletableFuture.runAsync(() -> {
+            try {
+                alertService.detectAbnormalTransactions();
+            } catch (Exception e) {
+                // Log lỗi
+                System.err.println("Error detecting abnormal transactions: " + e.getMessage());
+            }
         });
     }
 
@@ -69,8 +90,13 @@ public class SchedulerConfig {
         LocalDateTime lastMonth = now.minusMonths(1);
         int year = lastMonth.getYear();
         int month = lastMonth.getMonthValue();
-        Thread.startVirtualThread(() -> {
-            customerStatsService.generateStatsForMonth(year, month);
+        CompletableFuture.runAsync(() -> {
+            try {
+                customerStatsService.generateStatsForMonth(year, month);
+            } catch (Exception e) {
+                // Log lỗi
+                System.err.println("Error generating monthly customer stats: " + e.getMessage());
+            }
         });
     }
 }

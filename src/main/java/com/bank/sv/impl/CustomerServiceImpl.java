@@ -15,7 +15,6 @@ import com.bank.model.CustomerType;
 import com.bank.repository.AccountRepository;
 import com.bank.repository.CustomerRepository;
 import com.bank.repository.CustomerTypeRepository;
-import com.bank.repository.TransactionRepository;
 import com.bank.sv.CustomerService;
 import com.bank.utils.CustomerTypeUtils;
 import jakarta.persistence.EntityManager;
@@ -49,9 +48,6 @@ public class CustomerServiceImpl implements CustomerService {
 
     @Autowired
     private CustomerTypeRepository customerTypeRepository;
-
-    @Autowired
-    private TransactionRepository transactionRepository;
 
     @Autowired
     private PasswordEncoder passwordEncoder;

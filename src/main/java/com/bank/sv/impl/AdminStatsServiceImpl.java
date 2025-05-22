@@ -18,11 +18,9 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
-import java.text.SimpleDateFormat;
 import java.time.DayOfWeek;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
-import java.time.temporal.TemporalAdjuster;
 import java.time.temporal.TemporalAdjusters;
 import java.time.temporal.WeekFields;
 import java.util.*;
@@ -401,7 +399,6 @@ public class AdminStatsServiceImpl implements AdminStatsService {
         List<AdminStatistics> weeklyAggregatedStats = new ArrayList<>();
 
         for (Map.Entry<Integer, List<AdminStatistics>> entry : weeklyStats.entrySet()) {
-            Integer weekNumber = entry.getKey();
             List<AdminStatistics> weekStats = entry.getValue();
 
             if (weekStats.isEmpty()) continue;

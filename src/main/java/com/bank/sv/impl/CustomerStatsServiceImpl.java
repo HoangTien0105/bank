@@ -461,7 +461,6 @@ public class CustomerStatsServiceImpl implements CustomerStatsService {
         List<CustomerStatsResponseDto> statsList = new ArrayList<>();
         statsList.add(yearlyStats);
 
-        String period = "Yearly Report " + year;
         return ExcelUtils.createCustomerStatsExcel(statsList, year, null);
     }
 }

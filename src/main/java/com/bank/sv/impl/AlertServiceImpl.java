@@ -9,7 +9,6 @@ import com.bank.model.Alert;
 import com.bank.model.CustomerType;
 import com.bank.model.Transaction;
 import com.bank.repository.AlertRepository;
-import com.bank.repository.CustomerTypeRepository;
 import com.bank.repository.TransactionRepository;
 import com.bank.sv.AlertService;
 import com.bank.utils.CustomerTypeUtils;
@@ -17,6 +16,7 @@ import jakarta.persistence.EntityManager;
 import jakarta.persistence.TypedQuery;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
@@ -24,9 +24,9 @@ import org.springframework.util.StringUtils;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
-import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 
 @Service
@@ -37,9 +37,6 @@ public class AlertServiceImpl implements AlertService {
 
     @Autowired
     private TransactionRepository transactionRepository;
-
-    @Autowired
-    private CustomerTypeRepository customerTypeRepository;
 
     @Autowired
     private EntityManager entityManager;
@@ -64,17 +61,53 @@ public class AlertServiceImpl implements AlertService {
 
         List<Transaction> transactions = transactionRepository.findAllByTransactionDateBetween(startDate, checkTime);
 
-        for (Transaction transaction : transactions) {
-            // Kiểm tra xem giao dịch đã được cảnh báo chưa
-            if (!alertRepository.existsByTransactionId(transaction.getId())) {
-                Thread.startVirtualThread(() -> {
-                    if (isTransactionAbnormal(transaction)) {
-                        // Đã được xử lý trong phương thức isTransactionAbnormal
+        // Sử dụng Virtual Thread để xử lý danh sách giao dịch
+        List<CompletableFuture<Boolean>> futures = transactions.stream()
+                .filter(transaction -> !alertRepository.existsByTransactionId(transaction.getId()))
+                .map(transaction -> CompletableFuture.supplyAsync(() -> { //Tạo 1 task bất đồng bộ để trả về kết quả
+                    try{
+                        return processTransaction(transaction);
+                    } catch (Exception e) {
+                        System.err.println("Error processing transaction: " + e.getMessage());
+                        return false;
                     }
-                });
-            }
-        }
+                })).collect(Collectors.toList());
     }
+
+    private boolean processTransaction(Transaction transaction) {
+        boolean isAbnormal = false;
+
+        CustomerType customerTypeName = transaction.getAccount().getCustomer().getType();
+        BigDecimal threshold = getAmountThreshold(customerTypeName);
+
+        //Kiểm tra số tiền
+        if (transaction.getAmount().compareTo(threshold) > 0) {
+            createAlert(transaction, AlertType.LARGE_AMOUNT,
+                    "Transaction with an amount exceeding the threshold (" + transaction.getAmount()
+                            + ") from account " + transaction.getAccount().getId() + " in " + transaction.getTransactionDate());
+            isAbnormal = true;
+        }
+
+        //Kiểm tra giao dịch có xảy ra liên tục trong 1 khoảng thời gian ngắn không
+        LocalDateTime transactionTime = transaction.getTransactionDate().toInstant()
+                .atZone(ZoneId.of("Asia/Ho_Chi_Minh"))
+                .toLocalDateTime();
+        LocalDateTime rapidCheckTime = transactionTime.minusSeconds(timeThresholdSeconds);
+        Date rapidStartTime = Date.from(rapidCheckTime.atZone(ZoneId.of("Asia/Ho_Chi_Minh")).toInstant());
+
+        List<Transaction> rencentAccountWithTransactions = transactionRepository
+                .findByAccountAndTransactionDateBetween(transaction.getAccount(), rapidStartTime, transaction.getTransactionDate());
+
+        if (rencentAccountWithTransactions.size() > 3) {
+            createAlert(transaction, AlertType.RAPID_TRANSACTIONS,
+                    "Detected " + rencentAccountWithTransactions.size() + " transactions within " + timeThresholdSeconds
+                            + " seconds from account " + transaction.getAccount().getId() + " in " + transaction.getTransactionDate());
+            isAbnormal = true;
+        }
+
+        return isAbnormal;
+    }
+
 
     @Override
     public PaginDto<AlertResponseDto> getAlerts(PaginDto<AlertResponseDto> paginDto, String role) {
@@ -170,9 +203,8 @@ public class AlertServiceImpl implements AlertService {
     }
 
     @Override
-    public boolean isTransactionAbnormal(Transaction transaction) {
-        boolean isAbnormal = false;
-
+    @Async
+    public void isTransactionAbnormal(Transaction transaction) {
         CustomerType customerTypeName = transaction.getAccount().getCustomer().getType();
         BigDecimal threshold = getAmountThreshold(customerTypeName);
 
@@ -181,7 +213,6 @@ public class AlertServiceImpl implements AlertService {
             createAlert(transaction, AlertType.LARGE_AMOUNT,
                     "Transaction with an amount exceeding the threshold (" + transaction.getAmount()
                             + ") from account " + transaction.getAccount().getId() + " in " + transaction.getTransactionDate());
-            isAbnormal = true;
         }
 
         //Kiểm tra giao dịch có xảy ra liên tục trong 1 khoảng thời gian ngắn không
@@ -200,10 +231,16 @@ public class AlertServiceImpl implements AlertService {
             createAlert(transaction, AlertType.RAPID_TRANSACTIONS,
                     "Detected " + rencentAccountWithTransactions.size() + " transactions within " + timeThresholdSeconds
                             + " seconds from account " + transaction.getAccount().getId() + " in " + transaction.getTransactionDate());
-            isAbnormal = true;
         }
+    }
 
-        return isAbnormal;
+    @Async
+    public void checkAndCreateAlertWithoutBlocking(Transaction transaction) {
+        try {
+            isTransactionAbnormal(transaction);
+        } catch (Exception e) {
+            System.err.println("Error checking for abnormal transaction: " + e.getMessage());
+        }
     }
 
     private void createAlert(Transaction transaction, AlertType alertType, String description) {

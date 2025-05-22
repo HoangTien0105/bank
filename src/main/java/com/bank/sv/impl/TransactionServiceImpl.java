@@ -4,7 +4,6 @@ import com.bank.constant.Message;
 import com.bank.dto.PaginDto;
 import com.bank.dto.request.MoneyTransferRequestDto;
 import com.bank.dto.request.MoneyUpdateRequest;
-import com.bank.dto.response.AccountResponseDto;
 import com.bank.dto.response.TransactionResponseDto;
 import com.bank.enums.AccountStatus;
 import com.bank.enums.AccountType;
@@ -241,7 +240,6 @@ public class TransactionServiceImpl implements TransactionService {
             throw new RuntimeException("Destination account must be active");
         }
 
-
         if (fromAccount.getType() != AccountType.CHECKING) {
             throw new RuntimeException("Source account must be a CHECKING account");
         }
@@ -300,10 +298,8 @@ public class TransactionServiceImpl implements TransactionService {
         accountRepository.save(toAccount);
 
         // Kiểm tra giao dịch bất thường
-        Thread.startVirtualThread(() -> {
-            alertService.isTransactionAbnormal(fromTransaction);
-            alertService.isTransactionAbnormal(toTransaction);
-        });
+        alertService.isTransactionAbnormal(fromTransaction);
+        alertService.isTransactionAbnormal(toTransaction);
     }
 
     @Override
@@ -337,9 +333,7 @@ public class TransactionServiceImpl implements TransactionService {
         transactionRepository.save(transaction);
 
         // Kiểm tra giao dịch bất thường
-        Thread.startVirtualThread(() -> {
-            alertService.isTransactionAbnormal(transaction);
-        });
+        alertService.isTransactionAbnormal(transaction);
     }
 
     @Override
@@ -377,8 +371,6 @@ public class TransactionServiceImpl implements TransactionService {
         transactionRepository.save(transaction);
 
         // Kiểm tra giao dịch bất thường
-        Thread.startVirtualThread(() -> {
-            alertService.isTransactionAbnormal(transaction);
-        });
+        alertService.isTransactionAbnormal(transaction);
     }
 }
