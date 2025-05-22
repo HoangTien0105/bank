@@ -79,13 +79,15 @@ public class AccountServiceImpl implements AccountService {
         account.setStatus(newStatus);
         accountRepository.save(account);
 
-        AccountStatusHistory history = AccountStatusHistory.builder()
-                .status(account.getStatus())
-                .reason(request.getReason())
-                .customer(account.getCustomer())
-                .build();
+        Thread.startVirtualThread(() -> {
+            AccountStatusHistory history = AccountStatusHistory.builder()
+                    .status(account.getStatus())
+                    .reason(request.getReason())
+                    .customer(account.getCustomer())
+                    .build();
 
-        accountStatusHistoryRepository.save(history);
+            accountStatusHistoryRepository.save(history);
+        });
     }
 
     @Override
