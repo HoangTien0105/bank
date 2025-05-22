@@ -5,7 +5,11 @@ import lombok.Data;
 
 public interface Message {
 
+    //Data not found
+    String DATA_NOT_FOUND = "Data not found";
+
     //Validate Customer
+    String CUS_ID_REQUIRED = "Customer ID is required";
     String CUS_NOT_FOUND = "Customer not found!";
     String DUPLICATED_EMAIL = "Email already existed";
     String DUPLICATED_PHONE = "Phone already existed";
@@ -34,4 +38,11 @@ public interface Message {
     String ALERT_NOT_FOUND = "Alert not found";
     String ALERT_STATUS_REQUIRED = "Alert status is required";
     String ALERT_STATUS_INVALID = "Invalid alert status";
+
+    //Validate time
+    String START_BEFORE_END = "Start year must be before end year";
+    String YEAR_REQUIRED = "Year is required";
+    String START_END_REQUIRED = "Start date and end date are required";
+    String QUARTER_INVALID = "Quarter must be between 1 and 4";
+
 }

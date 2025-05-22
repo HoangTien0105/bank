@@ -16,4 +16,7 @@ public interface AdminStatsRepository extends JpaRepository<AdminStatistics, Lon
 
     @Query("SELECT s FROM AdminStatistics s WHERE s.date BETWEEN :startDate AND :endDate ORDER BY s.date")
     List<AdminStatistics> findByDateRange(@Param("startDate") LocalDateTime startDate, @Param("endDate") LocalDateTime endDate);
+
+    @Query("SELECT s FROM AdminStatistics s WHERE YEAR(s.date) = :year ORDER BY s.date")
+    List<AdminStatistics> findAllByYear(@Param("year") int year);
 }

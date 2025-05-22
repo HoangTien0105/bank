@@ -4,11 +4,13 @@ import com.bank.model.AdminStatistics;
 import com.bank.sv.AccountService;
 import com.bank.sv.AdminStatsService;
 import com.bank.sv.AlertService;
+import com.bank.sv.CustomerStatsService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.scheduling.annotation.Scheduled;
 
+import java.time.LocalDateTime;
 import java.util.Date;
 
 @Configuration
@@ -23,6 +25,9 @@ public class SchedulerConfig {
 
     @Autowired
     private AlertService alertService;
+
+    @Autowired
+    private CustomerStatsService customerStatsService;
 
     // Chạy vào 00:00 mỗi ngày
     @Scheduled(cron = "0 0 0 * * ?")
@@ -44,9 +49,19 @@ public class SchedulerConfig {
         accountService.monthlyDeposit();
     }
 
-    // Thêm lịch trình kiểm tra giao dịch bất thường mỗi 15 phút
+    // Thêm lịch trình kiểm tra giao dịch bất thường mỗi 1 tiếng
     @Scheduled(cron = "0 0 * * * ?")
     public void detectAbnormalTransactions() {
         alertService.detectAbnormalTransactions();
+    }
+
+    @Scheduled(cron = "0 0 0 1 * ?")
+    public void generateMonthlyCustomerStats(){
+        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime lastMonth = now.minusMonths(1);
+        int year = lastMonth.getYear();
+        int month = lastMonth.getMonthValue();
+
+        customerStatsService.generateStatsForMonth(year, month);
     }
 }

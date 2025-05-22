@@ -7,6 +7,8 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -91,6 +93,65 @@ public class AdminStatsController {
             return ResponseEntity.ok(apiResponse.response("Yearly statistics retrieved successfully", true, yearlyStats));
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(apiResponse.response(e.getMessage(), false, null));
+        }
+    }
+
+    @Operation(summary = "Export daily statistics to Excel")
+    @GetMapping("/export/daily")
+    public ResponseEntity<byte[]> exportDailyStats(
+            @RequestParam @DateTimeFormat(pattern = "dd-MM-yyyy") Date startDate,
+            @RequestParam @DateTimeFormat(pattern = "dd-MM-yyyy") Date endDate) {
+        try {
+            byte[] excelFile = adminStatsService.exportDailyStatsToExcel(startDate, endDate);
+            return ResponseEntity.ok()
+                    .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=daily_stats.xlsx")
+                    .contentType(MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
+                    .body(excelFile);
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().build();
+        }
+    }
+
+    @Operation(summary = "Export weekly statistics to Excel")
+    @GetMapping("/export/weekly/{year}")
+    public ResponseEntity<byte[]> exportWeeklyStats(@PathVariable int year) {
+        try {
+            byte[] excelFile = adminStatsService.exportWeeklyStatsToExcel(year);
+            return ResponseEntity.ok()
+                    .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=weekly_stats.xlsx")
+                    .contentType(MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
+                    .body(excelFile);
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().build();
+        }
+    }
+
+    @Operation(summary = "Export quarterly statistics to Excel")
+    @GetMapping("/export/quarterly/{year}")
+    public ResponseEntity<byte[]> exportQuarterlyStats(@PathVariable int year) {
+        try {
+            byte[] excelFile = adminStatsService.exportQuarterlyStatsToExcel(year);
+            return ResponseEntity.ok()
+                    .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=quarterly_stats.xlsx")
+                    .contentType(MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
+                    .body(excelFile);
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().build();
+        }
+    }
+
+    @Operation(summary = "Export yearly statistics to Excel")
+    @GetMapping("/export/yearly")
+    public ResponseEntity<byte[]> exportYearlyStats(
+            @RequestParam int year) {
+        try {
+            byte[] excelFile = adminStatsService.exportYearlyStatsToExcel(year);
+            return ResponseEntity.ok()
+                    .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=yearly_stats.xlsx")
+                    .contentType(MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
+                    .body(excelFile);
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().build();
         }
     }
 }

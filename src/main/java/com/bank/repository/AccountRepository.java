@@ -19,6 +19,9 @@ public interface AccountRepository extends JpaRepository<Account, String> {
     @Query("SELECT a FROM Account a WHERE a.customer.id = :customerId")
     List<Account> findByCustomerId(@Param("customerId") String customerId);
 
+    @Query("SELECT a FROM Account a WHERE a.customer.id = :customerId AND a.type = CHECKING")
+    Account findCheckingAccountByCustomerId(@Param("customerId") String customerId);
+
     @Query("SELECT a FROM Account a ORDER BY a.balanceType, a.balance DESC")
     Page<Account> findAllOrderedByAccountTypeAndBalanceDesc(Pageable pageable);
 

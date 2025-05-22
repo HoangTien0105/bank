@@ -20,7 +20,6 @@ import jakarta.persistence.TypedQuery;
 import jakarta.validation.ValidationException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.cache.annotation.Cacheable;
-import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
@@ -65,7 +64,7 @@ public class AccountServiceImpl implements AccountService {
     public void updateAccountStatus(String id, UpdateAccountStatusRequestDto request) {
         Account account = accountRepository.findById(id).orElseThrow(() -> new RuntimeException(Message.ACCOUNT_NOT_FOUND));
 
-        // Validate và chuyển đổi status từ String sang AccountStatus
+        //Validate status với enum
         AccountStatus newStatus;
         try {
             newStatus = AccountStatus.valueOf(request.getStatus().toUpperCase());
@@ -104,7 +103,6 @@ public class AccountServiceImpl implements AccountService {
         TypedQuery<Account> query;
 
         if ("ADMIN".equals(role)) {
-            // Admin can see all accounts
             jpql = "SELECT a FROM Account a WHERE " +
                     "(:keyword IS NULL OR " +
                     "LOWER(a.status) LIKE :searchPattern OR " +
@@ -112,7 +110,6 @@ public class AccountServiceImpl implements AccountService {
 
             query = entityManager.createQuery(jpql, Account.class);
         } else {
-            // Regular customers can only see their own accounts
             jpql = "SELECT a FROM Account a JOIN a.customer c WHERE " +
                     "c.id = :customerId AND " +
                     "(a.status = ACTIVE AND a.type = SAVING) AND " +
@@ -202,7 +199,6 @@ public class AccountServiceImpl implements AccountService {
         TypedQuery<Account> query;
 
         if ("ADMIN".equals(role)) {
-            // Admin can see all accounts
             jpql = "SELECT a FROM Account a WHERE " +
                     "(:keyword IS NULL OR " +
                     "LOWER(a.status) LIKE :searchPattern OR " +
@@ -211,7 +207,6 @@ public class AccountServiceImpl implements AccountService {
 
             query = entityManager.createQuery(jpql, Account.class);
         } else {
-            // Regular customers can only see their own accounts
             jpql = "SELECT a FROM Account a JOIN a.customer c WHERE " +
                     "c.id = :customerId AND " +
                     "(:keyword IS NULL OR " +
@@ -286,10 +281,8 @@ public class AccountServiceImpl implements AccountService {
     @Override
     @Transactional
     public void createSavingAccount(SavingAccountRequestDto requestDto, String customerId) {
-        //Validate cus
         Customer customer = customerRepository.findById(customerId).orElseThrow(() -> new RuntimeException("Customer not found"));
 
-        //Validate account
         Account sourceAccount = accountRepository.findById(requestDto.getSourceAccountId()).orElseThrow(() -> new RuntimeException("Source account not found"));
 
         // Validate source accounts có phải của cus k
@@ -305,7 +298,6 @@ public class AccountServiceImpl implements AccountService {
             throw new RuntimeException("Source account balance is not enough");
         }
 
-        //Lấy các gói tiết kiệm
         InterestRateConfig rateConfig = interestRateConfigRepository.findApplicableRatesByMonths(requestDto.getTermMonths());
 
         if (rateConfig == null) {
@@ -316,16 +308,14 @@ public class AccountServiceImpl implements AccountService {
         if (requestDto.getMonthlyDepositAmount() != null && requestDto.getMonthlyDepositAmount().compareTo(BigDecimal.ZERO) > 0) {
             depositDay = LocalDate.now().getDayOfMonth();
 
-            // Nếu ngày tạo từ 29-31, mặc định sẽ nạp vào ngày 1 tháng sau
             if (depositDay >= 29) {
                 depositDay = 1;
             }
         }
 
-        //Tính ngày đáo hạn
+        //Ngày đáo hạn
         Date maturityDate = Date.from(LocalDate.now().plusMonths(requestDto.getTermMonths()).atStartOfDay(ZoneId.systemDefault()).toInstant());
 
-        //Tạo tài khoản tiết kiệm
         Account savingAccount = Account.builder()
                 .type(AccountType.SAVING)
                 .status(AccountStatus.ACTIVE)
@@ -347,8 +337,6 @@ public class AccountServiceImpl implements AccountService {
         String sourceBalanceStatus = BalanceTypeUtils.validateBalanceStatus(sourceAccount);
         sourceAccount.setBalanceType(BalanceType.valueOf(sourceBalanceStatus));
 
-        // Tạo transaction cho việc tạo tài khoản tiết kiệm
-
         Date transactionDate = Date.from(LocalDateTime.now().atZone(ZoneId.systemDefault()).toInstant());
 
         Transaction transaction = Transaction.builder()
@@ -360,7 +348,6 @@ public class AccountServiceImpl implements AccountService {
                 .transactionDate(transactionDate)
                 .build();
 
-        //Save
         accountRepository.save(sourceAccount);
         accountRepository.save(savingAccount);
         transactionRepository.save(transaction);
@@ -394,7 +381,6 @@ public class AccountServiceImpl implements AccountService {
             // Chuyển tiền gốc + lãi
             sourceAccount.setBalance(sourceAccount.getBalance().add(totalAmount));
 
-            //Cập nhật lại balance type
             String sourceBalanceStatus = BalanceTypeUtils.validateBalanceStatus(sourceAccount);
             sourceAccount.setBalanceType(BalanceType.valueOf(sourceBalanceStatus));
 
@@ -402,7 +388,6 @@ public class AccountServiceImpl implements AccountService {
             savingAccount.setStatus(AccountStatus.INACTIVE);
             savingAccount.setBalance(BigDecimal.ZERO);
 
-            //Save
             accountRepository.save(savingAccount);
             accountRepository.save(sourceAccount);
             transactionRepository.save(transaction);
@@ -433,27 +418,23 @@ public class AccountServiceImpl implements AccountService {
 
             //Kiểm tra xem tài khoản đủ tiền k
             if (sourceAccount.getBalance().compareTo(account.getMonthlyDepositAmount()) >= 0) {
-                //Trừ tiền tài khoản nguồn
+
                 sourceAccount.setBalance(sourceAccount.getBalance().subtract(account.getMonthlyDepositAmount()));
 
-                //Cộng tiền vào tài khoản tiết kiệm
                 account.setBalance(account.getBalance().add(account.getMonthlyDepositAmount()));
 
-                //Cập nhật balance type
                 String sourceBalanceStatus = BalanceTypeUtils.validateBalanceStatus(sourceAccount);
                 sourceAccount.setBalanceType(BalanceType.valueOf(sourceBalanceStatus));
 
                 String savingBalanceStatus = BalanceTypeUtils.validateBalanceStatus(account);
                 account.setBalanceType(BalanceType.valueOf(savingBalanceStatus));
 
-                //Tạo transaction success
                 transaction.setType(TransactionType.SAVING_DEPOSIT_SUCCESS);
                 transaction.setDescription("Monthly deposit to saving account " + account.getId());
-                //Save
+
                 accountRepository.save(sourceAccount);
                 accountRepository.save(account);
             } else {
-                //Tạo transaction failed
                 transaction.setType(TransactionType.SAVING_DEPOSIT_FAILED);
                 transaction.setDescription("Failed monthly deposit to saving account " + account.getId() + " due to insufficient balance in source account");
             }

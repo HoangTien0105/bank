@@ -1,5 +1,6 @@
 package com.bank.sv.impl;
 
+import com.bank.constant.Message;
 import com.bank.model.AdminStatistics;
 import com.bank.repository.AccountRepository;
 import com.bank.repository.AdminStatsRepository;
@@ -7,6 +8,7 @@ import com.bank.repository.CustomerRepository;
 import com.bank.repository.TransactionRepository;
 import com.bank.sv.AdminStatsService;
 import com.bank.utils.DateUtils;
+import com.bank.utils.ExcelUtils;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -21,7 +23,9 @@ import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.temporal.TemporalAdjuster;
 import java.time.temporal.TemporalAdjusters;
+import java.time.temporal.WeekFields;
 import java.util.*;
+import java.util.stream.Collectors;
 
 @Service
 public class AdminStatsServiceImpl implements AdminStatsService {
@@ -193,7 +197,7 @@ public class AdminStatsServiceImpl implements AdminStatsService {
     @Override
     public Map<String, Object> getStatisticsForQuarter(int quarter, int year) {
         if (quarter < 1 || quarter > 4) {
-            throw new IllegalArgumentException("Quarter must be between 1 and 4");
+            throw new IllegalArgumentException(Message.QUARTER_INVALID);
         }
 
         // Tính toán tháng bắt đầu và kết thúc của quý
@@ -345,5 +349,272 @@ public class AdminStatsServiceImpl implements AdminStatsService {
         result.put("totalNewSavingAccounts", totalNewSavingAccounts);
 
         return result;
+    }
+
+    @Override
+    public byte[] exportDailyStatsToExcel(Date startDate, Date endDate) {
+        if (startDate == null || endDate == null) {
+            throw new IllegalArgumentException(Message.START_END_REQUIRED);
+        }
+
+        if (startDate.after(endDate)) {
+            throw new IllegalArgumentException(Message.YEAR_REQUIRED);
+        }
+
+        // Chuyển đổi Date thành LocalDateTime
+        LocalDateTime start = startDate.toInstant().atZone(ZoneId.of("Asia/Ho_Chi_Minh")).toLocalDateTime().withHour(0).withMinute(0).withSecond(0);
+        LocalDateTime end = endDate.toInstant().atZone(ZoneId.of("Asia/Ho_Chi_Minh")).toLocalDateTime().withHour(23).withMinute(59).withSecond(59);
+
+        List<AdminStatistics> statsList = adminStatsRepository.findByDateRange(start, end);
+
+        if (statsList.isEmpty()) {
+            throw new RuntimeException(Message.DATA_NOT_FOUND);
+        }
+
+        // Format period string for report title
+        String period = DateUtils.formatDate(startDate) + " - " + DateUtils.formatDate(endDate);
+
+        return ExcelUtils.createAdminStatsExcel(statsList, period);
+    }
+
+    @Override
+    public byte[] exportWeeklyStatsToExcel(int year) {
+
+        List<AdminStatistics> allYearStats = adminStatsRepository.findAllByYear(year);
+
+        if (allYearStats.isEmpty()) {
+            throw new RuntimeException(Message.DATA_NOT_FOUND + year);
+        }
+
+        // Map thống kê theo tuần
+        Map<Integer, List<AdminStatistics>> weeklyStats = allYearStats.stream()
+                .collect(Collectors.groupingBy(stats -> {
+                    LocalDateTime date = stats.getDate();
+                    return date.get(WeekFields.of(Locale.getDefault()).weekOfYear());
+                }));
+
+        List<AdminStatistics> weeklyAggregatedStats = new ArrayList<>();
+
+        for (Map.Entry<Integer, List<AdminStatistics>> entry : weeklyStats.entrySet()) {
+            Integer weekNumber = entry.getKey();
+            List<AdminStatistics> weekStats = entry.getValue();
+
+            if (weekStats.isEmpty()) continue;
+
+            // ngày đầu tuần
+            AdminStatistics firstDayOfWeek = weekStats.get(0);
+
+            Long totalTransactions = weekStats.stream().mapToLong(AdminStatistics::getTotalTransactions).sum();
+
+            BigDecimal maxAmount = weekStats.stream()
+                    .map(AdminStatistics::getMaxTransactionAmount)
+                    .filter(Objects::nonNull)
+                    .max(BigDecimal::compareTo)
+                    .orElse(BigDecimal.ZERO);
+
+            BigDecimal minAmount = weekStats.stream()
+                    .map(AdminStatistics::getMinTransactionAmount)
+                    .filter(Objects::nonNull)
+                    .min(BigDecimal::compareTo)
+                    .orElse(BigDecimal.ZERO);
+
+            BigDecimal totalWeightedAvg = BigDecimal.ZERO;
+            Long totalWeightedCount = 0L;
+
+            for (AdminStatistics stats : weekStats) {
+                if (stats.getAvgTransactionAmount() != null && stats.getTotalTransactions() > 0) {
+                    totalWeightedAvg = totalWeightedAvg.add(
+                            stats.getAvgTransactionAmount().multiply(new BigDecimal(stats.getTotalTransactions())));
+                    totalWeightedCount += stats.getTotalTransactions();
+                }
+            }
+
+            BigDecimal avgAmount = totalWeightedCount > 0 ?
+                    totalWeightedAvg.divide(new BigDecimal(totalWeightedCount), 2, RoundingMode.HALF_UP) :
+                    BigDecimal.ZERO;
+
+            Long newCustomers = weekStats.stream().mapToLong(AdminStatistics::getNewCustomers).sum();
+            Long newSavingAccounts = weekStats.stream().mapToLong(AdminStatistics::getNewSavingAccounts).sum();
+
+            Long totalCustomers = weekStats.stream()
+                    .max(Comparator.comparing(AdminStatistics::getDate))
+                    .map(AdminStatistics::getTotalCustomers)
+                    .orElse(0L);
+
+            // Tạo đối tượng thống kê tuần
+            AdminStatistics response = AdminStatistics.builder()
+                    .date(firstDayOfWeek.getDate())
+                    .totalTransactions(totalTransactions)
+                    .maxTransactionAmount(maxAmount)
+                    .avgTransactionAmount(avgAmount)
+                    .minTransactionAmount(minAmount)
+                    .newCustomers(newCustomers)
+                    .totalCustomers(totalCustomers)
+                    .newSavingAccounts(newSavingAccounts)
+                    .build();
+
+            weeklyAggregatedStats.add(response);
+        }
+
+        weeklyAggregatedStats.sort(Comparator.comparing(AdminStatistics::getDate));
+
+        String period = "Weekly Report " + year;
+        return ExcelUtils.createAdminStatsExcel(weeklyAggregatedStats, period);
+    }
+
+    @Override
+    public byte[] exportQuarterlyStatsToExcel(int year) {
+        List<AdminStatistics> allYearStats = adminStatsRepository.findAllByYear(year);
+
+        if (allYearStats.isEmpty()) {
+            throw new RuntimeException(Message.DATA_NOT_FOUND + year);
+        }
+
+        // Nhóm thống kê theo quý
+        Map<Integer, List<AdminStatistics>> quarterlyStats = allYearStats.stream()
+                .collect(Collectors.groupingBy(stats -> {
+                    int month = stats.getDate().getMonthValue();
+                    return (month - 1) / 3 + 1; // Chuyển đổi tháng thành quý (1-4)
+                }));
+
+        // Tạo danh sách thống kê quý với giá trị tổng hợp
+        List<AdminStatistics> quarterlyAggregatedStats = new ArrayList<>();
+
+        for (int quarter = 1; quarter <= 4; quarter++) {
+            List<AdminStatistics> quarterStats = quarterlyStats.getOrDefault(quarter, Collections.emptyList());
+
+            if (quarterStats.isEmpty()) continue;
+
+            // Tính ngày đầu quý
+            int startMonth = (quarter - 1) * 3 + 1;
+            LocalDateTime quarterStartDate = LocalDateTime.of(year, startMonth, 1, 0, 0, 0);
+
+            // Tính tổng các giá trị
+            Long totalTransactions = quarterStats.stream().mapToLong(AdminStatistics::getTotalTransactions).sum();
+
+            BigDecimal maxAmount = quarterStats.stream()
+                    .map(AdminStatistics::getMaxTransactionAmount)
+                    .filter(Objects::nonNull)
+                    .max(BigDecimal::compareTo)
+                    .orElse(BigDecimal.ZERO);
+
+            BigDecimal minAmount = quarterStats.stream()
+                    .map(AdminStatistics::getMinTransactionAmount)
+                    .filter(Objects::nonNull)
+                    .min(BigDecimal::compareTo)
+                    .orElse(BigDecimal.ZERO);
+
+            // Tính trung bình có trọng số
+            BigDecimal totalWeightedAvg = BigDecimal.ZERO;
+            Long totalWeightedCount = 0L;
+
+            for (AdminStatistics stats : quarterStats) {
+                if (stats.getAvgTransactionAmount() != null && stats.getTotalTransactions() > 0) {
+                    totalWeightedAvg = totalWeightedAvg.add(
+                            stats.getAvgTransactionAmount().multiply(new BigDecimal(stats.getTotalTransactions())));
+                    totalWeightedCount += stats.getTotalTransactions();
+                }
+            }
+
+            BigDecimal avgAmount = totalWeightedCount > 0 ?
+                    totalWeightedAvg.divide(new BigDecimal(totalWeightedCount), 2, RoundingMode.HALF_UP) :
+                    BigDecimal.ZERO;
+
+            Long newCustomers = quarterStats.stream().mapToLong(AdminStatistics::getNewCustomers).sum();
+            Long newSavingAccounts = quarterStats.stream().mapToLong(AdminStatistics::getNewSavingAccounts).sum();
+
+            // Lấy tổng số khách hàng từ ngày cuối cùng của quý
+            Long totalCustomers = quarterStats.stream()
+                    .max(Comparator.comparing(AdminStatistics::getDate))
+                    .map(AdminStatistics::getTotalCustomers)
+                    .orElse(0L);
+
+            // Tạo đối tượng thống kê quý
+            AdminStatistics quarterlyStatsResponse = AdminStatistics.builder()
+                    .date(quarterStartDate)
+                    .totalTransactions(totalTransactions)
+                    .maxTransactionAmount(maxAmount)
+                    .avgTransactionAmount(avgAmount)
+                    .minTransactionAmount(minAmount)
+                    .newCustomers(newCustomers)
+                    .totalCustomers(totalCustomers)
+                    .newSavingAccounts(newSavingAccounts)
+                    .build();
+
+            quarterlyAggregatedStats.add(quarterlyStatsResponse);
+        }
+
+        // Sắp xếp theo thứ tự thời gian
+        quarterlyAggregatedStats.sort(Comparator.comparing(AdminStatistics::getDate));
+
+        String period = "Quarterly Report " + year;
+        return ExcelUtils.createAdminStatsExcel(quarterlyAggregatedStats, period);
+    }
+
+    @Override
+    public byte[] exportYearlyStatsToExcel(int year) {
+
+        List<AdminStatistics> yearStats = adminStatsRepository.findAllByYear(year);
+
+        if (yearStats.isEmpty()) {
+            throw new RuntimeException(Message.DATA_NOT_FOUND);
+        }
+
+        LocalDateTime yearStartDate = LocalDateTime.of(year, 1, 1, 0, 0, 0);
+        Long totalTransactions = yearStats.stream().mapToLong(AdminStatistics::getTotalTransactions).sum();
+
+        BigDecimal maxAmount = yearStats.stream()
+                .map(AdminStatistics::getMaxTransactionAmount)
+                .filter(Objects::nonNull)
+                .max(BigDecimal::compareTo)
+                .orElse(BigDecimal.ZERO);
+
+        BigDecimal minAmount = yearStats.stream()
+                .map(AdminStatistics::getMinTransactionAmount)
+                .filter(Objects::nonNull)
+                .min(BigDecimal::compareTo)
+                .orElse(BigDecimal.ZERO);
+
+        BigDecimal totalWeightedAvg = BigDecimal.ZERO;
+        Long totalWeightedCount = 0L;
+
+        for (AdminStatistics stats : yearStats) {
+            if (stats.getAvgTransactionAmount() != null && stats.getTotalTransactions() > 0) {
+                totalWeightedAvg = totalWeightedAvg.add(
+                        stats.getAvgTransactionAmount().multiply(new BigDecimal(stats.getTotalTransactions())));
+                totalWeightedCount += stats.getTotalTransactions();
+            }
+        }
+
+        BigDecimal avgAmount = totalWeightedCount > 0 ?
+                totalWeightedAvg.divide(new BigDecimal(totalWeightedCount), 2, RoundingMode.HALF_UP) :
+                BigDecimal.ZERO;
+
+        Long newCustomers = yearStats.stream().mapToLong(AdminStatistics::getNewCustomers).sum();
+        Long newSavingAccounts = yearStats.stream().mapToLong(AdminStatistics::getNewSavingAccounts).sum();
+
+        // Lấy tổng số khách hàng từ ngày cuối cùng của năm
+        Long totalCustomers = yearStats.stream()
+                .max(Comparator.comparing(AdminStatistics::getDate))
+                .map(AdminStatistics::getTotalCustomers)
+                .orElse(0L);
+
+        // Tạo đối tượng thống kê năm
+        AdminStatistics yearlyStats = AdminStatistics.builder()
+                .date(yearStartDate)
+                .totalTransactions(totalTransactions)
+                .maxTransactionAmount(maxAmount)
+                .avgTransactionAmount(avgAmount)
+                .minTransactionAmount(minAmount)
+                .newCustomers(newCustomers)
+                .totalCustomers(totalCustomers)
+                .newSavingAccounts(newSavingAccounts)
+                .build();
+
+        List<AdminStatistics> yearlyAggregatedStats = new ArrayList<>();
+        yearlyAggregatedStats.add(yearlyStats);
+
+        String period = "Yearly Report " + year;
+        return ExcelUtils.createAdminStatsExcel(yearlyAggregatedStats, period);
     }
 }
