@@ -34,6 +34,8 @@ public class TransactionController {
                                                   @RequestParam(value = "limit", defaultValue = "10") Integer limit,
                                                   @RequestParam(value = "keyword", required = false) String keyword,
                                                   @RequestParam(value = "location", required = false) String location,
+                                                  @RequestParam(value = "minAmount", required = false) Double minAmount,
+                                                  @RequestParam(value = "maxAmount", required = false) Double maxAmount,
                                                   @RequestParam(value = "sortBy", required = false) String sortBy,
                                                   @RequestParam(value = "sortDirection", required = false, defaultValue = "ASC") String sortDirection) {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
@@ -52,6 +54,13 @@ public class TransactionController {
 
         if (location != null) {
             options.put("location", location);
+        }
+
+        if (minAmount != null) {
+            options.put("minAmount", minAmount);
+        }
+        if (maxAmount != null) {
+            options.put("maxAmount", maxAmount);
         }
 
         paginDto.setOptions(options);

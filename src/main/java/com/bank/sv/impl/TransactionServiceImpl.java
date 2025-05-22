@@ -79,6 +79,15 @@ public class TransactionServiceImpl implements TransactionService {
             jpqlBuilder.append(" AND LOWER(t.location) LIKE :locationPattern");
         }
 
+        if (options != null) {
+            if (options.containsKey("minAmount")) {
+                jpqlBuilder.append(" AND t.amount >= :minAmount");
+            }
+            if (options.containsKey("maxAmount")) {
+                jpqlBuilder.append(" AND t.amount <= :maxAmount");
+            }
+        }
+
         // Add sorting if provided
         if (options != null && options.containsKey("sortBy")) {
             String sortBy = (String) options.get("sortBy");
@@ -111,6 +120,16 @@ public class TransactionServiceImpl implements TransactionService {
             query.setParameter("locationPattern", "%" + location.toLowerCase() + "%");
         }
 
+        if (options != null) {
+            if (options.containsKey("minAmount")) {
+                query.setParameter("minAmount", BigDecimal.valueOf((Double) options.get("minAmount")));
+            }
+            if (options.containsKey("maxAmount")) {
+                query.setParameter("maxAmount", BigDecimal.valueOf((Double) options.get("maxAmount")));
+            }
+        }
+
+
         List<Transaction> transactions = query
                 .setFirstResult(pageNumber * limit)
                 .setMaxResults(limit)
@@ -135,6 +154,15 @@ public class TransactionServiceImpl implements TransactionService {
             countJpqlBuilder.append(" AND LOWER(t.location) LIKE :locationPattern");
         }
 
+        if (options != null) {
+            if (options.containsKey("minAmount")) {
+                countJpqlBuilder.append(" AND t.amount >= :minAmount");
+            }
+            if (options.containsKey("maxAmount")) {
+                countJpqlBuilder.append(" AND t.amount <= :maxAmount");
+            }
+        }
+
         TypedQuery<Long> countQuery = entityManager.createQuery(countJpqlBuilder.toString(), Long.class);
 
         if (!"ADMIN".equals(role)) {
@@ -153,6 +181,15 @@ public class TransactionServiceImpl implements TransactionService {
         if (options != null && options.containsKey("location")) {
             String location = (String) options.get("location");
             countQuery.setParameter("locationPattern", "%" + location.toLowerCase() + "%");
+        }
+
+        if (options != null) {
+            if (options.containsKey("minAmount")) {
+                countQuery.setParameter("minAmount", BigDecimal.valueOf((Double) options.get("minAmount")));
+            }
+            if (options.containsKey("maxAmount")) {
+                countQuery.setParameter("maxAmount", BigDecimal.valueOf((Double) options.get("maxAmount")));
+            }
         }
 
         Long totalRows = countQuery.getSingleResult();
