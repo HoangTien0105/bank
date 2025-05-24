@@ -335,6 +335,8 @@ public class TransactionServiceImpl implements TransactionService {
         fromTransaction.setLocation(request.getLocation());
         fromTransaction.setType(TransactionType.TRANSFER_OUT);
         fromTransaction.setTransactionDate(transactionDate);
+        fromTransaction.setFromAccountId(fromAccount.getId());
+        fromTransaction.setToAccountId(toAccount.getId());
 
         Transaction toTransaction = new Transaction();
         toTransaction.setAccount(toAccount);
@@ -343,6 +345,8 @@ public class TransactionServiceImpl implements TransactionService {
         toTransaction.setLocation(request.getLocation());
         toTransaction.setType(TransactionType.TRANSFER_IN);
         toTransaction.setTransactionDate(transactionDate);
+        toTransaction.setFromAccountId(fromAccount.getId());
+        toTransaction.setToAccountId(toAccount.getId());
 
         transactionRepository.save(fromTransaction);
         transactionRepository.save(toTransaction);

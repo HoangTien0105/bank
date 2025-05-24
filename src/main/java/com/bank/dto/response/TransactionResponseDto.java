@@ -19,8 +19,11 @@ public class TransactionResponseDto {
     private String location;
     private String description;
     private Date createDate;
+    private String accountId;
+    private String fromAccountId;
+    private String toAccountId;
 
-    public static TransactionResponseDto build(Transaction transaction){
+    public static TransactionResponseDto build(Transaction transaction) {
         return builder()
                 .id(transaction.getId())
                 .type(transaction.getType().toString())
@@ -29,6 +32,9 @@ public class TransactionResponseDto {
                 .location(transaction.getLocation())
                 .description(transaction.getDescription())
                 .createDate(transaction.getCreateDate())
+                .accountId(transaction.getAccount() != null ? transaction.getAccount().getId() : null)
+                .fromAccountId(transaction.getFromAccountId())
+                .toAccountId(transaction.getToAccountId())
                 .build();
     }
 }

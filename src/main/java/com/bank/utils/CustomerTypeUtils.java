@@ -17,6 +17,8 @@ public class CustomerTypeUtils {
 
             if (Value.BUSINESS_TYPE.equalsIgnoreCase(customerTypeName)) {
                 account.setTransactionLimit(Value.BUSINESS);
+            } else if (Value.TEMPORARY_TYPE.equalsIgnoreCase(customerTypeName)) {
+                account.setTransactionLimit(Value.TEMPORARY);
             } else {
                 // Mặc định là khách hàng cá nhân
                 account.setTransactionLimit(Value.PERSONAL);
@@ -33,6 +35,8 @@ public class CustomerTypeUtils {
             String customerTypeName = customerType.getName();
             if (Value.BUSINESS_TYPE.equalsIgnoreCase(customerTypeName)) {
                 return Value.BUSINESS;
+            } else if (Value.TEMPORARY_TYPE.equalsIgnoreCase(customerTypeName)) {
+                return Value.TEMPORARY;
             }
         }
         // Mặc định là khách hàng cá nhân

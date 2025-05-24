@@ -378,6 +378,8 @@ public class AccountServiceImpl implements AccountService {
                 .description("Initial deposit for saving account")
                 .account(savingAccount)
                 .transactionDate(transactionDate)
+                .fromAccountId(sourceAccount.getId())
+                .toAccountId(savingAccount.getId())
                 .build();
 
         accountRepository.save(sourceAccount);
@@ -408,6 +410,8 @@ public class AccountServiceImpl implements AccountService {
                     .description("Interest payment for saving account " + savingAccount.getId())
                     .account(sourceAccount)
                     .transactionDate(new Date())
+                    .fromAccountId(savingAccount.getId())
+                    .toAccountId(savingAccount.getId())
                     .build();
 
             // Chuyển tiền gốc + lãi
@@ -464,11 +468,16 @@ public class AccountServiceImpl implements AccountService {
                 transaction.setType(TransactionType.SAVING_DEPOSIT_SUCCESS);
                 transaction.setDescription("Monthly deposit to saving account " + account.getId());
 
+                transaction.setFromAccountId(sourceAccount.getId());
+                transaction.setToAccountId(account.getId());
+
                 accountRepository.save(sourceAccount);
                 accountRepository.save(account);
             } else {
                 transaction.setType(TransactionType.SAVING_DEPOSIT_FAILED);
                 transaction.setDescription("Failed monthly deposit to saving account " + account.getId() + " due to insufficient balance in source account");
+
+                transaction.setFromAccountId(sourceAccount.getId());
             }
             transactionRepository.save(transaction);
         }

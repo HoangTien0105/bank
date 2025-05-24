@@ -38,4 +38,10 @@ public class Transaction extends BaseEntity{
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "account_id", nullable = false)
     private Account account;
+
+    @Column(name = "from_account_id")
+    private String fromAccountId;
+
+    @Column(name = "to_account_id")
+    private String toAccountId;
 }

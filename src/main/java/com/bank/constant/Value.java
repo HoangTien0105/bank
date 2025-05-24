@@ -5,6 +5,8 @@ import java.math.BigDecimal;
 public interface Value {
 
     //Transaction Limit and alert
+    // Hạn mức giao dịch cho khách hàng cá nhân tạm thời (50 triệu)
+    public static final BigDecimal TEMPORARY = new BigDecimal("5000000");
     // Hạn mức giao dịch cho khách hàng cá nhân (50 triệu)
     public static final BigDecimal PERSONAL = new BigDecimal("50000000");
     // Hạn mức giao dịch cho doanh nghiệp (5 tỷ)
@@ -18,4 +20,5 @@ public interface Value {
     //CustomerType
     public static final String PERSONAL_TYPE = "PERSONAL";
     public static final String BUSINESS_TYPE = "BUSINESS";
+    public static final String TEMPORARY_TYPE = "TEMPORARY";
 }
