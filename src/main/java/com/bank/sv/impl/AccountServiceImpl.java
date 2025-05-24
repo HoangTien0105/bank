@@ -104,14 +104,11 @@ public class AccountServiceImpl implements AccountService {
 
         StringBuilder jpql = new StringBuilder("SELECT a FROM Account a");
 
-        if ("ADMIN".equals(role)) {
-            jpql.append(" JOIN a.customer c");
-        }
-
+        jpql.append(" JOIN a.customer c");
         jpql.append(" WHERE ");
 
         if (!"ADMIN".equals(role)) {
-            jpql.append("c.id = :customerId AND (a.status = 'ACTIVE' AND a.type = 'SAVING') AND ");
+            jpql.append("c.id = :customerId AND ((a.type = 'SAVING' AND a.status = 'ACTIVE') OR a.type != 'SAVING') AND ");
         }
 
         jpql.append("(:keyword IS NULL OR ")
@@ -157,14 +154,11 @@ public class AccountServiceImpl implements AccountService {
 
         StringBuilder countJpqlBuilder = new StringBuilder("SELECT COUNT(a) FROM Account a");
 
-        if (!"ADMIN".equals(role)) {
-            countJpqlBuilder.append(" JOIN a.customer c");
-        }
-
+        countJpqlBuilder.append(" JOIN a.customer c");
         countJpqlBuilder.append(" WHERE ");
 
         if (!"ADMIN".equals(role)) {
-            countJpqlBuilder.append("c.id = :customerId AND (a.status = 'ACTIVE' AND a.type = 'SAVING') AND ");
+            countJpqlBuilder.append("c.id = :customerId AND ((a.type = 'SAVING' AND a.status = 'ACTIVE') OR a.type != 'SAVING') AND ");
         }
 
         countJpqlBuilder.append("(:keyword IS NULL OR ")

@@ -74,6 +74,10 @@ public class TransactionServiceImpl implements TransactionService {
                 .append("LOWER(t.type) LIKE :searchPattern OR ")
                 .append("LOWER(t.location) LIKE :searchPattern)");
 
+        if (options != null && options.containsKey("accountId")) {
+            jpqlBuilder.append(" AND t.account.id = :accountId");
+        }
+
         // Add location filter if provided
         if (options != null && options.containsKey("location")) {
             jpqlBuilder.append(" AND LOWER(t.location) LIKE :locationPattern");
@@ -120,6 +124,10 @@ public class TransactionServiceImpl implements TransactionService {
             query.setParameter("locationPattern", "%" + location.toLowerCase() + "%");
         }
 
+        if (options != null && options.containsKey("accountId")) {
+            query.setParameter("accountId", options.get("accountId"));
+        }
+
         if (options != null) {
             if (options.containsKey("minAmount")) {
                 query.setParameter("minAmount", BigDecimal.valueOf((Double) options.get("minAmount")));
@@ -149,6 +157,10 @@ public class TransactionServiceImpl implements TransactionService {
                 .append("LOWER(t.type) LIKE :searchPattern OR ")
                 .append("LOWER(t.location) LIKE :searchPattern)");
 
+        if (options != null && options.containsKey("accountId")) {
+            countJpqlBuilder.append(" AND t.account.id = :accountId");
+        }
+
         // Add location filter for count query too
         if (options != null && options.containsKey("location")) {
             countJpqlBuilder.append(" AND LOWER(t.location) LIKE :locationPattern");
@@ -162,6 +174,7 @@ public class TransactionServiceImpl implements TransactionService {
                 countJpqlBuilder.append(" AND t.amount <= :maxAmount");
             }
         }
+
 
         TypedQuery<Long> countQuery = entityManager.createQuery(countJpqlBuilder.toString(), Long.class);
 
@@ -190,6 +203,10 @@ public class TransactionServiceImpl implements TransactionService {
             if (options.containsKey("maxAmount")) {
                 countQuery.setParameter("maxAmount", BigDecimal.valueOf((Double) options.get("maxAmount")));
             }
+        }
+
+        if (options != null && options.containsKey("accountId")) {
+            countQuery.setParameter("accountId", options.get("accountId"));
         }
 
         Long totalRows = countQuery.getSingleResult();

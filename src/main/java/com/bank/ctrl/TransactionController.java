@@ -127,4 +127,27 @@ public class TransactionController {
 
         return ResponseEntity.ok(apiResponse.response("Retrieved data successfully", true, result));
     }
+
+    @Operation(summary = "Get transactions by account id")
+    @GetMapping(value = "/account/{id}")
+    public ResponseEntity<Object> getTransactionsByAccountId(@PathVariable(value = "id") String id,
+                                                             @RequestParam(value = "offset", defaultValue = "0") String offset,
+                                                             @RequestParam(value = "limit", defaultValue = "10") String limit) {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        JwtUser jwtUser = (JwtUser) authentication.getPrincipal();
+
+        PaginDto<TransactionResponseDto> paginDto = new PaginDto<>();
+        paginDto.setOffset(offset);
+        paginDto.setLimit(limit);
+
+        Map<String, Object> options = new HashMap<>();
+
+        options.put("accountId", id);
+
+        paginDto.setOptions(options);
+
+        PaginDto<TransactionResponseDto> result = transactionService.getTransactions(paginDto, jwtUser.getId(), jwtUser.getRole());
+
+        return ResponseEntity.ok(apiResponse.response("Retrieved data successfully", true, result));
+    }
 }

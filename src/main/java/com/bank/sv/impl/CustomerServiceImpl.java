@@ -220,6 +220,7 @@ public class CustomerServiceImpl implements CustomerService {
                 .balance(BigDecimal.ZERO)
                 .customer(customer)
                 .build();
+
         // Thiết lập hạn mức giao dịch dựa trên loại khách hàng
         CustomerTypeUtils.setTransactionLimitBasedOnCustomerType(account);
 
