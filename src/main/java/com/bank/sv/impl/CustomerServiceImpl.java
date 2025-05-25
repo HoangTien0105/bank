@@ -73,6 +73,7 @@ public class CustomerServiceImpl implements CustomerService {
 
         StringBuilder jpql = new StringBuilder(
                 "SELECT DISTINCT c FROM Customer c " +
+                        "LEFT JOIN Account a ON a.customer = c " +
                         "LEFT JOIN Transaction t ON t.account = a " +
                         "WHERE (:keyword IS NULL OR " +
                         "LOWER(c.name) LIKE :searchPattern OR " +
