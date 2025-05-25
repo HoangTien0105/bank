@@ -6,6 +6,7 @@ import com.bank.dto.PaginDto;
 import com.bank.dto.request.CustomerAccountRequestDto;
 import com.bank.dto.request.CustomerUpdateRequestDto;
 import com.bank.dto.response.CustomerLocationDto;
+import com.bank.dto.response.CustomerWithAccounResponseDto;
 import com.bank.enums.AccountStatus;
 import com.bank.enums.AccountType;
 import com.bank.enums.BalanceType;
@@ -175,6 +176,29 @@ public class CustomerServiceImpl implements CustomerService {
         List<Customer> customerList = customerRepository.findByName(name);
 
         return customerList.stream().map(customer -> CustomerDto.build(customer, customer.getType())).collect(Collectors.toList());
+    }
+
+    @Override
+    @Cacheable(value = "customer_search", key = "#root.method.name + '_' + #search ")
+    public List<CustomerWithAccounResponseDto> searchCustomer(String search, String cusId) {
+        List<Customer> customersByNameOrPhone = customerRepository.findByNameOrPhoneLike(search);
+        customersByNameOrPhone.removeIf(customer -> customer.getId().equals(cusId));
+
+        Account searchAccount = accountRepository.findCheckingAccountByIdAndNotCustomerId(search, cusId)
+                .orElse(null);
+
+        if (searchAccount != null) {
+            Customer customerByAccount = searchAccount.getCustomer();
+            if (!customersByNameOrPhone.contains(customerByAccount)) {
+                customersByNameOrPhone.add(customerByAccount);
+            }
+        }
+
+        return customersByNameOrPhone.stream().map(customer -> {
+                    Account account = accountRepository.findCheckingAccountByCustomerId(customer.getId());
+                    return CustomerWithAccounResponseDto.build(customer, account);
+                })
+                .collect(Collectors.toList());
     }
 
     @Override

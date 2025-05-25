@@ -221,6 +221,12 @@ public class AccountServiceImpl implements AccountService {
     }
 
     @Override
+    public AccountResponseDto getTrackingAccountByCusId(String cusId) {
+        Account account = accountRepository.findCheckingAccountByCustomerId(cusId);
+        return AccountResponseDto.build(account);
+    }
+
+    @Override
     public PaginDto<AccountResponseDto> getAccountsGroupByType(PaginDto<AccountResponseDto> paginDto, String customerId, String role) {
         int offset = paginDto.getOffset() != null ? paginDto.getOffset() : 0;
         int limit = paginDto.getLimit() != null ? paginDto.getLimit() : 10;

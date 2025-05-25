@@ -9,6 +9,7 @@ public interface AccountService {
     void updateAccountStatus(String id, UpdateAccountStatusRequestDto request);
     PaginDto<AccountResponseDto> getAccounts(PaginDto<AccountResponseDto> paginDto, String customerId, String role);
     AccountResponseDto getAccountById(String id);
+    AccountResponseDto getTrackingAccountByCusId(String cusId);
     PaginDto<AccountResponseDto> getAccountsGroupByType(PaginDto<AccountResponseDto> paginDto, String customerId, String role);
     void createSavingAccount(SavingAccountRequestDto requestDto, String customerId);
     void processSavingAccount();

@@ -49,4 +49,7 @@ public interface CustomerRepository extends JpaRepository<Customer, String> {
 
     @Query("SELECT COUNT(c) FROM Customer c WHERE c.createDate <= :endDate")
     Long countTotalCustomersByDate(Date endDate);
+
+    @Query("SELECT DISTINCT c FROM Customer c WHERE LOWER(c.name) LIKE LOWER(CONCAT('%', :search, '%')) OR LOWER(c.phone) LIKE LOWER(CONCAT('%', :search, '%'))")
+    List<Customer> findByNameOrPhoneLike(@Param("search") String search);
 }

@@ -1,11 +1,14 @@
 package com.bank.ctrl;
 
 import com.bank.constant.Message;
+import com.bank.constant.Value;
 import com.bank.dto.CustomerDto;
 import com.bank.dto.PaginDto;
 import com.bank.dto.request.CustomerAccountRequestDto;
 import com.bank.dto.request.CustomerUpdateRequestDto;
 import com.bank.dto.response.CustomerLocationDto;
+import com.bank.dto.response.CustomerWithAccounResponseDto;
+import com.bank.model.JwtUser;
 import com.bank.sv.CustomerService;
 import com.bank.sv.CustomerTypeService;
 import com.bank.utils.APIResponse;
@@ -14,6 +17,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.HashMap;
@@ -40,19 +44,19 @@ public class CustomerController {
                                                @RequestParam(value = "keyword", required = false) String keyword,
                                                @RequestParam(value = "location", required = false) String location,
                                                @RequestParam(value = "sortBy", required = false) String sortBy,
-                                               @RequestParam(value = "sortDirection", required = false,defaultValue = "ASC") String sortDirection){
+                                               @RequestParam(value = "sortDirection", required = false, defaultValue = "ASC") String sortDirection) {
         PaginDto<CustomerDto> paginDto = new PaginDto<>();
         paginDto.setOffset(offset);
         paginDto.setLimit(limit);
         paginDto.setKeyword(keyword);
 
         Map<String, Object> options = new HashMap<>();
-        if(sortBy != null){
+        if (sortBy != null) {
             options.put("sortBy", sortBy);
             options.put("sortDirection", sortDirection);
         }
 
-        if(location != null){
+        if (location != null) {
             options.put("location", location);
         }
 
@@ -64,14 +68,14 @@ public class CustomerController {
     }
 
     @GetMapping("{id}")
-    public ResponseEntity<Object> getCustomerById(@RequestParam(value = "id") String id){
+    public ResponseEntity<Object> getCustomerById(@RequestParam(value = "id") String id) {
         CustomerDto customer = customerService.getCustomerById(id);
 
         return ResponseEntity.ok(apiResponse.response("Retrieved data successfully", true, customer));
     }
 
     @GetMapping("/name")
-    public ResponseEntity<Object> getCustomerByNAme(@RequestParam(value = "name") String name){
+    public ResponseEntity<Object> getCustomerByNAme(@RequestParam(value = "name") String name) {
         List<CustomerDto> customerList = customerService.getCustomerByName(name);
         return ResponseEntity.ok(apiResponse.response("Retrieved data successfully", true, customerList));
     }
@@ -80,20 +84,20 @@ public class CustomerController {
             summary = "Create customers with accounts"
     )
     @PostMapping
-    public ResponseEntity<Object> createCustomerWithAccount(@Valid @RequestBody(required = true) CustomerAccountRequestDto request){
-        try{
+    public ResponseEntity<Object> createCustomerWithAccount(@Valid @RequestBody(required = true) CustomerAccountRequestDto request) {
+        try {
             customerService.createCustomer(request);
-        } catch (Exception e){
+        } catch (Exception e) {
             return ResponseEntity.badRequest().body(apiResponse.response(e.getMessage(), false, null));
         }
         return ResponseEntity.ok(apiResponse.response("Create customer with accounts successfully", true, null));
     }
 
     @PutMapping("{id}")
-    public ResponseEntity<Object> updateCustomerInfo(@PathVariable String id, @Valid @RequestBody(required = true) CustomerUpdateRequestDto request){
-        try{
+    public ResponseEntity<Object> updateCustomerInfo(@PathVariable String id, @Valid @RequestBody(required = true) CustomerUpdateRequestDto request) {
+        try {
             customerService.updateCustomer(id, request);
-        } catch (Exception e){
+        } catch (Exception e) {
             return ResponseEntity.badRequest().body(apiResponse.response(e.getMessage(), false, null));
         }
         return ResponseEntity.ok(apiResponse.response("Update successfully", true, null));
@@ -101,10 +105,10 @@ public class CustomerController {
 
 
     @PostMapping("/customerType")
-    public ResponseEntity<Object> createType(@RequestParam(value = "name") String name){
-        try{
+    public ResponseEntity<Object> createType(@RequestParam(value = "name") String name) {
+        try {
             customerTypeService.createCustomerType(name);
-        } catch (Exception e){
+        } catch (Exception e) {
             return ResponseEntity.badRequest().body(apiResponse.response(e.getMessage(), false, null));
         }
         return ResponseEntity.ok(apiResponse.response("Create type successfully", true, null));
@@ -116,7 +120,7 @@ public class CustomerController {
     @GetMapping("/place")
     public ResponseEntity<Object> getCustomersByLocation(@RequestParam(value = "offset", defaultValue = "0") String offset,
                                                          @RequestParam(value = "limit", defaultValue = "10") String limit,
-                                                         @RequestParam(value = "location") String location){
+                                                         @RequestParam(value = "location") String location) {
         PaginDto<CustomerLocationDto> paginDto = new PaginDto<>();
         paginDto.setOffset(offset);
         paginDto.setLimit(limit);
@@ -124,5 +128,17 @@ public class CustomerController {
         PaginDto<CustomerLocationDto> result = customerService.getCustomersByLocation(paginDto, location);
 
         return ResponseEntity.ok(apiResponse.response("Retrieved data successfully", true, result));
+    }
+
+    @Operation(summary = "Search customer by name, phone or account id")
+    @GetMapping("/search")
+    public ResponseEntity<Object> searchCustomer(@RequestParam(value = "search") String search, Authentication authentication) {
+        try {
+            JwtUser jwtUser = (JwtUser) authentication.getPrincipal();
+            List<CustomerWithAccounResponseDto> customer = customerService.searchCustomer(search, jwtUser.getId());
+            return ResponseEntity.ok(apiResponse.response("Retrieved data successfully", true, customer));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(apiResponse.response("Data not found", false, null));
+        }
     }
 }

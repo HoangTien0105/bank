@@ -64,6 +64,7 @@ public class SecurityConfig  {
                         .requestMatchers("/api/alerts/**").hasRole("ADMIN")
                         .requestMatchers("/api/customer-stats/**").authenticated()
                         .requestMatchers("/api/customer-stats/generate").hasRole("ADMIN")
+                        .requestMatchers("/api/customer/search").authenticated()
                         .requestMatchers("/api/transactions/**").authenticated()
                         .requestMatchers("/api/accounts/**").authenticated()
                         .requestMatchers("/api/auth/logout").authenticated()

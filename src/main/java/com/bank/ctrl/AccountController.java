@@ -52,7 +52,7 @@ public class AccountController {
             options.put("sortDirection", sortDirection);
         }
 
-        if(balanceType != null){
+        if (balanceType != null) {
             options.put("balanceType", balanceType);
         }
 
@@ -115,5 +115,21 @@ public class AccountController {
                     .body(apiResponse.response(e.getMessage(), false, null));
         }
         return ResponseEntity.ok(apiResponse.response("Create saving account successfully", true, null));
+    }
+
+    @Operation(summary = "Get tracking account by customer id")
+    @GetMapping("/customer")
+    public ResponseEntity<Object> getTrackingAccountByCustomerId(
+            Authentication authentication
+    ) {
+        try {
+            JwtUser jwtUser = (JwtUser) authentication.getPrincipal();
+            AccountResponseDto account = accountService.getTrackingAccountByCusId(jwtUser.getId());
+            return ResponseEntity.ok(apiResponse.response("Retrieved data successfully", true, account));
+        } catch (Exception e) {
+            return ResponseEntity
+                    .status(HttpStatus.BAD_REQUEST)
+                    .body(apiResponse.response(e.getMessage(), false, null));
+        }
     }
 }

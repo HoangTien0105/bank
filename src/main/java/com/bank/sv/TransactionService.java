@@ -9,7 +9,7 @@ public interface TransactionService {
     PaginDto<TransactionResponseDto> getTransactions(PaginDto<TransactionResponseDto> paginDto, String customerId, String role);
     PaginDto<TransactionResponseDto> getTransactionsOrderByDate(PaginDto<TransactionResponseDto> paginDto);
     TransactionResponseDto getTransactionById(String id);
-    void transferMoney(MoneyTransferRequestDto request, String customerId);
-    void depositMoney(MoneyUpdateRequest request, String customerId);
-    void withdrawMoney(MoneyUpdateRequest request, String customerId);
+    TransactionResponseDto transferMoney(MoneyTransferRequestDto request, String customerId);
+    TransactionResponseDto depositMoney(MoneyUpdateRequest request, String customerId);
+    TransactionResponseDto withdrawMoney(MoneyUpdateRequest request, String customerId);
 }

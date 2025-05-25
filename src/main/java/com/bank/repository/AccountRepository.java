@@ -13,6 +13,7 @@ import org.springframework.stereotype.Repository;
 import java.math.BigDecimal;
 import java.util.Date;
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface AccountRepository extends JpaRepository<Account, String> {
@@ -47,4 +48,7 @@ public interface AccountRepository extends JpaRepository<Account, String> {
 
     @Query("SELECT COUNT(a) FROM Account a WHERE a.type = SAVING AND a.createDate BETWEEN :startDate AND :endDate")
     Long countAllNewCreatedSavingAccountsByDate(Date startDate, Date endDate);
+
+    @Query("SELECT DISTINCT a FROM Account a WHERE a.id = :accountId AND a.type = CHECKING AND a.customer.id != :excludeCustomerId")
+    Optional<Account> findCheckingAccountByIdAndNotCustomerId(@Param("accountId") String accountId, @Param("excludeCustomerId") String excludeCustomerId);
 }

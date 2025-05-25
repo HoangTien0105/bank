@@ -268,7 +268,7 @@ public class TransactionServiceImpl implements TransactionService {
 
     @Override
     @Transactional
-    public void transferMoney(MoneyTransferRequestDto request, String customerId) {
+    public TransactionResponseDto transferMoney(MoneyTransferRequestDto request, String customerId) {
         String fromAccountId = request.getFromAccountId();
         String toAccountId = request.getToAccountId();
         String description = request.getDescription();
@@ -348,7 +348,7 @@ public class TransactionServiceImpl implements TransactionService {
         toTransaction.setFromAccountId(fromAccount.getId());
         toTransaction.setToAccountId(toAccount.getId());
 
-        transactionRepository.save(fromTransaction);
+        Transaction savedTransaction = transactionRepository.save(fromTransaction);
         transactionRepository.save(toTransaction);
 
         // Save accounts
@@ -358,11 +358,13 @@ public class TransactionServiceImpl implements TransactionService {
         // Kiểm tra giao dịch bất thường
         alertService.isTransactionAbnormal(fromTransaction);
         alertService.isTransactionAbnormal(toTransaction);
+
+        return TransactionResponseDto.build(savedTransaction);
     }
 
     @Override
     @Transactional
-    public void depositMoney(MoneyUpdateRequest request, String customerId) {
+    public TransactionResponseDto depositMoney(MoneyUpdateRequest request, String customerId) {
         Account account = accountRepository.findById(request.getAccountId()).orElseThrow(() -> new RuntimeException("Account not found"));
 
         if (!account.getCustomer().getId().equals(customerId)) {
@@ -388,15 +390,16 @@ public class TransactionServiceImpl implements TransactionService {
         transaction.setType(TransactionType.DEPOSIT);
         transaction.setLocation(request.getLocation());
         transaction.setDescription("Deposit money into wallet");
-        transactionRepository.save(transaction);
+        Transaction savedTransaction = transactionRepository.save(transaction);
 
         // Kiểm tra giao dịch bất thường
         alertService.isTransactionAbnormal(transaction);
+        return TransactionResponseDto.build(savedTransaction);
     }
 
     @Override
     @Transactional
-    public void withdrawMoney(MoneyUpdateRequest request, String customerId) {
+    public TransactionResponseDto withdrawMoney(MoneyUpdateRequest request, String customerId) {
         Account account = accountRepository.findById(request.getAccountId()).orElseThrow(() -> new RuntimeException("Account not found"));
 
         if (!account.getCustomer().getId().equals(customerId)) {
@@ -426,9 +429,11 @@ public class TransactionServiceImpl implements TransactionService {
         transaction.setType(TransactionType.WITHDRAW);
         transaction.setLocation(request.getLocation());
         transaction.setDescription("Withdraw money from wallet");
-        transactionRepository.save(transaction);
+        Transaction savedTransaction = transactionRepository.save(transaction);
 
         // Kiểm tra giao dịch bất thường
         alertService.isTransactionAbnormal(transaction);
+
+        return TransactionResponseDto.build(savedTransaction);
     }
 }

@@ -82,11 +82,12 @@ public class TransactionController {
         try {
             Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
             JwtUser jwtUser = (JwtUser) authentication.getPrincipal();
-            transactionService.transferMoney(request, jwtUser.getId());
+            TransactionResponseDto transaction = transactionService.transferMoney(request, jwtUser.getId());
+
+            return ResponseEntity.ok(apiResponse.response("Transfer money successfully", true, transaction));
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(apiResponse.response(e.getMessage(), false, null));
         }
-        return ResponseEntity.ok(apiResponse.response("Transfer money successfully", true, null));
     }
 
     @Operation(summary = "Deposit money")
@@ -95,11 +96,12 @@ public class TransactionController {
         try {
             Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
             JwtUser jwtUser = (JwtUser) authentication.getPrincipal();
-            transactionService.depositMoney(request, jwtUser.getId());
+            TransactionResponseDto transaction = transactionService.depositMoney(request, jwtUser.getId());
+
+            return ResponseEntity.ok(apiResponse.response("Deposit money successfully", true, transaction));
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(apiResponse.response(e.getMessage(), false, null));
         }
-        return ResponseEntity.ok(apiResponse.response("Deposit money successfully", true, null));
     }
 
     @Operation(summary = "Withdraw money")
@@ -108,11 +110,11 @@ public class TransactionController {
         try {
             Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
             JwtUser jwtUser = (JwtUser) authentication.getPrincipal();
-            transactionService.withdrawMoney(request, jwtUser.getId());
+            TransactionResponseDto transaction = transactionService.withdrawMoney(request, jwtUser.getId());
+            return ResponseEntity.ok(apiResponse.response("Withdraw money successfully", true, transaction));
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(apiResponse.response(e.getMessage(), false, null));
         }
-        return ResponseEntity.ok(apiResponse.response("Withdraw money successfully", true, null));
     }
 
     @Operation(summary = "Get transactions by date")
