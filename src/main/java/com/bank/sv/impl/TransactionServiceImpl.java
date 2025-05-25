@@ -392,6 +392,7 @@ public class TransactionServiceImpl implements TransactionService {
         transaction.setType(TransactionType.DEPOSIT);
         transaction.setLocation(request.getLocation());
         transaction.setDescription("Deposit money into wallet");
+        transaction.setToAccountId(account.getId());
         Transaction savedTransaction = transactionRepository.save(transaction);
 
         // Kiểm tra giao dịch bất thường
@@ -431,6 +432,7 @@ public class TransactionServiceImpl implements TransactionService {
         transaction.setType(TransactionType.WITHDRAW);
         transaction.setLocation(request.getLocation());
         transaction.setDescription("Withdraw money from wallet");
+        transaction.setFromAccountId(account.getId());
         Transaction savedTransaction = transactionRepository.save(transaction);
 
         // Kiểm tra giao dịch bất thường
