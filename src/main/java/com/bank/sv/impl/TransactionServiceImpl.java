@@ -70,6 +70,7 @@ public class TransactionServiceImpl implements TransactionService {
         }
 
         jpqlBuilder.append("(:keyword IS NULL OR ")
+                .append("t.id = :searchPattern OR ")
                 .append("LOWER(t.description) LIKE :searchPattern OR ")
                 .append("LOWER(t.type) LIKE :searchPattern OR ")
                 .append("LOWER(t.location) LIKE :searchPattern)");
@@ -153,6 +154,7 @@ public class TransactionServiceImpl implements TransactionService {
         }
 
         countJpqlBuilder.append("(:keyword IS NULL OR ")
+                .append("t.id = :searchPattern OR ")
                 .append("LOWER(t.description) LIKE :searchPattern OR ")
                 .append("LOWER(t.type) LIKE :searchPattern OR ")
                 .append("LOWER(t.location) LIKE :searchPattern)");
