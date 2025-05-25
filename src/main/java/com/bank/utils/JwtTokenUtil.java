@@ -25,28 +25,31 @@ public class JwtTokenUtil {
     @Value("${jwt.expiration}")
     private Long expiration;
 
+    @Value("${jwt.refreshExpiration}")
+    private Long refreshExpiration;
+
     private SecretKey getSigningKey() {
         return Keys.hmacShaKeyFor(secret.getBytes());
     } // Tạo secret key từ thuật toán HMAC
 
-    public String generateToken(UserDetails userDetails){
+    public String generateToken(UserDetails userDetails) {
         Map<String, Object> claims = new HashMap<>();
         String tokenId = UUID.randomUUID().toString();
         claims.put("tokenId", tokenId);
         claims.put("type", "access");
 
         String role;
-    if (userDetails instanceof JwtUser) {
-        JwtUser jwtUser = (JwtUser) userDetails;
-        role = jwtUser.getRole();
-    } else {
-        // Lấy role từ authorities của UserDetails
-        role = userDetails.getAuthorities().stream()
-            .findFirst()
-            .map(auth -> auth.getAuthority().replace("ROLE_", ""))
-            .orElse("CUSTOMER");
-    }
-    claims.put("role", role);
+        if (userDetails instanceof JwtUser) {
+            JwtUser jwtUser = (JwtUser) userDetails;
+            role = jwtUser.getRole();
+        } else {
+            // Lấy role từ authorities của UserDetails
+            role = userDetails.getAuthorities().stream()
+                    .findFirst()
+                    .map(auth -> auth.getAuthority().replace("ROLE_", ""))
+                    .orElse("CUSTOMER");
+        }
+        claims.put("role", role);
 
         // Add JwtUser information if available
         if (userDetails instanceof JwtUser) {
@@ -80,7 +83,7 @@ public class JwtTokenUtil {
                 .setClaims(claims)
                 .setSubject(userDetails.getUsername())
                 .setIssuedAt(new Date())
-                .setExpiration(new Date(System.currentTimeMillis() + expiration * 10 * 1000))
+                .setExpiration(new Date(System.currentTimeMillis() + refreshExpiration * 1000))
                 .signWith(getSigningKey(), SignatureAlgorithm.HS256)
                 .compact();
     }
@@ -98,7 +101,7 @@ public class JwtTokenUtil {
                 .getPayload();
     }
 
-    public Boolean validateToken(String token, UserDetails userDetails){
+    public Boolean validateToken(String token, UserDetails userDetails) {
         final String username = getUsernameFromToken(token);
         return (username.equals(userDetails.getUsername()) && !isTokenExpired(token));
     }
@@ -108,7 +111,7 @@ public class JwtTokenUtil {
         return expiration.before(new Date());
     }
 
-    public String getUsernameFromToken(String token){
+    public String getUsernameFromToken(String token) {
         return getClaimFromToken(token, Claims::getSubject);
     }
 
