@@ -14,4 +14,6 @@ public interface InterestRateConfigService {
     void updateRateStatus(String id);
     //Trả về lãi suất dựa vào số ngày
     BigDecimal getApplicableRate(Date startDate, Date maturityDate);
+    //Trả về số tiền dự tính sẽ nhận đựợc
+    BigDecimal calculateInterest(Double principal, Integer months, Double annualRate, Double monthlyDeposit);
 }

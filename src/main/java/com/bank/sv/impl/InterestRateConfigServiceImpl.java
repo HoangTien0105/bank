@@ -29,9 +29,9 @@ public class InterestRateConfigServiceImpl implements InterestRateConfigService 
     @Transactional
     public void createRate(InterestRateRequestDto requestDto) {
         List<InterestRateConfig> existRates = interestRateConfigRepository.findAllActiveRates();
-        boolean duplicatedTerms = existRates.stream().anyMatch(rate -> rate .getTermMonths().equals(requestDto.getTermMonths()));
+        boolean duplicatedTerms = existRates.stream().anyMatch(rate -> rate.getTermMonths().equals(requestDto.getTermMonths()));
 
-        if(duplicatedTerms){
+        if (duplicatedTerms) {
             throw new RuntimeException("Term with " + requestDto.getTermMonths() + " months already existed");
         }
 
@@ -95,5 +95,16 @@ public class InterestRateConfigServiceImpl implements InterestRateConfigService 
 
         //Trả về cái có lãi suất cao nhất để thuyết phục khách hàng
         return rates.get(0).getInterestRate();
+    }
+
+    @Override
+    public BigDecimal calculateInterest(Double principal, Integer months, Double annualRate, Double monthlyDeposit) {
+        double monthlyRate = annualRate / 12 / 100;
+        for (int i = 0; i < months; i++) {
+            principal = principal * (1 + monthlyRate);
+            if (monthlyDeposit != null && monthlyDeposit != 0) principal += monthlyDeposit;
+        }
+
+        return BigDecimal.valueOf(principal);
     }
 }

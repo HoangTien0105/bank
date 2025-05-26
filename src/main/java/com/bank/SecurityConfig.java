@@ -55,7 +55,7 @@ public class SecurityConfig  {
                         .requestMatchers("/v3/api-docs/**").permitAll()
                         .requestMatchers("/swagger-ui/**").permitAll()
                         .requestMatchers("/swagger-ui.html").permitAll()
-                        .requestMatchers(HttpMethod.GET ,"/api/interest-rates").permitAll()
+                        .requestMatchers(HttpMethod.GET ,"/api/interest-rates/**").permitAll()
                         .requestMatchers(HttpMethod.PUT ,"/api/interest-rates/**").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.POST ,"/api/interest-rates").hasRole("ADMIN")
                         .requestMatchers("/api/customer/**").hasRole("ADMIN")

@@ -108,13 +108,13 @@ public class AccountController {
     ) {
         try {
             JwtUser jwtUser = (JwtUser) authentication.getPrincipal();
-            accountService.createSavingAccount(requestDto, jwtUser.getId());
+            AccountResponseDto account = accountService.createSavingAccount(requestDto, jwtUser.getId());
+            return ResponseEntity.ok(apiResponse.response("Create saving account successfully", true, account));
         } catch (Exception e) {
             return ResponseEntity
                     .status(HttpStatus.BAD_REQUEST)
                     .body(apiResponse.response(e.getMessage(), false, null));
         }
-        return ResponseEntity.ok(apiResponse.response("Create saving account successfully", true, null));
     }
 
     @Operation(summary = "Get tracking account by customer id")

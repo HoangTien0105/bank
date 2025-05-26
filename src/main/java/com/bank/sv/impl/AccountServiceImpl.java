@@ -169,14 +169,6 @@ public class AccountServiceImpl implements AccountService {
             countJpqlBuilder.append(" AND LOWER(a.balanceType) LIKE :balanceTypePattern");
         }
 
-        if (options != null && options.containsKey("sortBy")) {
-            String sortBy = (String) options.get("sortBy");
-            String sortDirection = (String) options.getOrDefault("sortDirection", "ASC");
-
-            if (isValidAccountSortField(sortBy)) {
-                countJpqlBuilder.append(" ORDER BY a.").append(sortBy).append(" ").append(sortDirection);
-            }
-        }
 
         TypedQuery<Long> countQuery = entityManager.createQuery(countJpqlBuilder.toString(), Long.class);
 
@@ -318,7 +310,7 @@ public class AccountServiceImpl implements AccountService {
 
     @Override
     @Transactional
-    public void createSavingAccount(SavingAccountRequestDto requestDto, String customerId) {
+    public AccountResponseDto createSavingAccount(SavingAccountRequestDto requestDto, String customerId) {
         Customer customer = customerRepository.findById(customerId).orElseThrow(() -> new RuntimeException("Customer not found"));
 
         Account sourceAccount = accountRepository.findById(requestDto.getSourceAccountId()).orElseThrow(() -> new RuntimeException("Source account not found"));
@@ -391,6 +383,8 @@ public class AccountServiceImpl implements AccountService {
         accountRepository.save(sourceAccount);
         accountRepository.save(savingAccount);
         transactionRepository.save(transaction);
+
+        return AccountResponseDto.build(sourceAccount);
     }
 
     @Transactional

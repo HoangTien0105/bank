@@ -11,6 +11,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.math.BigDecimal;
 import java.util.List;
 
 @RestController
@@ -23,19 +24,28 @@ public class InterestRateConfigController {
     @Autowired
     private APIResponse apiResponse;
 
+    @GetMapping("/calculate")
+    public ResponseEntity<Object> calculateInterest(@RequestParam(value = "principal") Double principal,
+                                                    @RequestParam(value = "months") Integer months,
+                                                    @RequestParam(value = "annualRate") Double annualRate,
+                                                    @RequestParam(value = "monthlyDeposit", required = false) Double monthlyDeposit) {
+        BigDecimal expectedAmount = interestRateConfigService.calculateInterest(principal,months,annualRate,monthlyDeposit);
+        return ResponseEntity.ok(apiResponse.response("Retrieved successfully", true, expectedAmount));
+    }
+
     @GetMapping
-    public ResponseEntity<Object> getAllRates(){
-        try{
+    public ResponseEntity<Object> getAllRates() {
+        try {
             List<InterestRateConfig> rates = interestRateConfigService.getAllActiveRates();
             return ResponseEntity.ok(apiResponse.response("Retrieved successfully", true, rates));
-        }catch (Exception e) {
+        } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
                     .body(apiResponse.response("Rates not found", false, null));
         }
     }
 
     @PostMapping
-    public ResponseEntity<Object> createRate(@Valid @RequestBody(required = true)InterestRateRequestDto requestDto){
+    public ResponseEntity<Object> createRate(@Valid @RequestBody(required = true) InterestRateRequestDto requestDto) {
         try {
             interestRateConfigService.createRate(requestDto);
         } catch (Exception e) {
@@ -46,7 +56,7 @@ public class InterestRateConfigController {
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<Object> updateRate(@PathVariable String id, @Valid @RequestBody(required = true)InterestRateRequestDto requestDto){
+    public ResponseEntity<Object> updateRate(@PathVariable String id, @Valid @RequestBody(required = true) InterestRateRequestDto requestDto) {
         try {
             interestRateConfigService.updateRate(id, requestDto);
         } catch (Exception e) {
