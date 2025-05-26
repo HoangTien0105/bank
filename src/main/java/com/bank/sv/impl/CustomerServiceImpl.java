@@ -1,10 +1,12 @@
 package com.bank.sv.impl;
 
 import com.bank.constant.Message;
+import com.bank.constant.Value;
 import com.bank.dto.CustomerDto;
 import com.bank.dto.PaginDto;
 import com.bank.dto.request.CustomerAccountRequestDto;
 import com.bank.dto.request.CustomerUpdateRequestDto;
+import com.bank.dto.request.RegisterRequestDto;
 import com.bank.dto.response.CustomerLocationDto;
 import com.bank.dto.response.CustomerWithAccounResponseDto;
 import com.bank.enums.AccountStatus;
@@ -164,6 +166,50 @@ public class CustomerServiceImpl implements CustomerService {
         paginDto.setTotalPages((int) Math.ceil((double) totalRows / limit));
 
         return paginDto;
+    }
+
+    @Override
+    public void register(RegisterRequestDto registerRequestDto) {
+        if (!registerRequestDto.getPassword().equals(registerRequestDto.getConfirmPassword())) {
+            throw new ValidationException(Message.INVALID_PASSWORD);
+        }
+        if (customerRepository.existsByEmail(registerRequestDto.getEmail()) != null) {
+            throw new DuplicateKeyException(Message.DUPLICATED_EMAIL);
+        }
+        if (customerRepository.existsByCitizenId(registerRequestDto.getCitizenId()) != null) {
+            throw new DuplicateKeyException(Message.DUPLICATED_CITIZEN);
+        }
+        if (customerRepository.existsByPhone(registerRequestDto.getPhone()) != null) {
+            throw new DuplicateKeyException(Message.DUPLICATED_PHONE);
+        }
+
+        CustomerType customerType = customerTypeRepository.existsByName(Value.TEMPORARY_TYPE);
+        if (customerType == null) {
+            throw new ValidationException("Customer type TEMPORARY not found in database");
+        }
+
+        Customer customer = Customer.builder()
+                .name(registerRequestDto.getName())
+                .email(registerRequestDto.getEmail())
+                .citizenId(registerRequestDto.getCitizenId())
+                .phone(registerRequestDto.getPhone())
+                .address(registerRequestDto.getAddress())
+                .password(passwordEncoder.encode(registerRequestDto.getPassword()))
+                .type(customerType)
+                .build();
+
+        customerRepository.save(customer);
+
+        Account account = Account.builder()
+                .type(AccountType.CHECKING)
+                .balanceType(BalanceType.LOW)
+                .status(AccountStatus.ACTIVE)
+                .balance(BigDecimal.ZERO)
+                .customer(customer)
+                .build();
+
+        CustomerTypeUtils.setTransactionLimitBasedOnCustomerType(account);
+        accountRepository.save(account);
     }
 
     @Override

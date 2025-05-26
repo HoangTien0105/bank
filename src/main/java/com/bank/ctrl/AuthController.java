@@ -2,6 +2,7 @@ package com.bank.ctrl;
 
 import com.bank.dto.CustomerDto;
 import com.bank.dto.request.LoginRequestDto;
+import com.bank.dto.request.RegisterRequestDto;
 import com.bank.dto.response.TokenResponseDto;
 import com.bank.model.JwtUser;
 import com.bank.sv.CustomerService;
@@ -57,7 +58,6 @@ public class AuthController {
             TokenResponseDto tokenResponse = tokenService.generateTokens(userDetails);
 
             return ResponseEntity.ok(apiResponse.response("Login successful", true, tokenResponse));
-
         } catch (BadCredentialsException e) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                     .body(apiResponse.response("Invalid username or password", false, null));
@@ -84,6 +84,16 @@ public class AuthController {
         return ResponseEntity.ok(apiResponse.response("Logout successful", true, null));
     }
 
+    @Operation(summary = "Register new customer with TEMPORARY type")
+    @PostMapping("/register")
+    public ResponseEntity<Object> register(@Valid @RequestBody RegisterRequestDto request) {
+        try {
+            customerService.register(request);
+            return ResponseEntity.ok(apiResponse.response("Registration successful", true, null));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(apiResponse.response(e.getMessage(), false, null));
+        }
+    }
 
     @Operation(summary = "Refresh access token if refresh token is still valid")
     @PostMapping("/refreshToken")

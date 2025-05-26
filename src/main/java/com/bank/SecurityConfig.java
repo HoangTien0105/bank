@@ -51,6 +51,7 @@ public class SecurityConfig  {
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)) // Không lưu session
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api/auth/login").permitAll()
+                        .requestMatchers("/api/auth/register").permitAll()
                         .requestMatchers("/api/auth/refreshToken").permitAll()
                         .requestMatchers("/v3/api-docs/**").permitAll()
                         .requestMatchers("/swagger-ui/**").permitAll()
