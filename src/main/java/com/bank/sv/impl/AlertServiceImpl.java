@@ -65,7 +65,7 @@ public class AlertServiceImpl implements AlertService {
         List<CompletableFuture<Boolean>> futures = transactions.stream()
                 .filter(transaction -> !alertRepository.existsByTransactionId(transaction.getId()))
                 .map(transaction -> CompletableFuture.supplyAsync(() -> { //Tạo 1 task bất đồng bộ để trả về kết quả
-                    try{
+                    try {
                         return processTransaction(transaction);
                     } catch (Exception e) {
                         System.err.println("Error processing transaction: " + e.getMessage());
@@ -118,26 +118,11 @@ public class AlertServiceImpl implements AlertService {
         AlertType alertType = null;
         AlertStatus alertStatus = null;
 
-        // Try to convert keyword to enums if present
-        if (StringUtils.hasText(keyword)) {
-            try {
-                alertType = AlertType.valueOf(keyword.toUpperCase());
-            } catch (IllegalArgumentException e) {
-                // Ignore conversion error
-            }
-
-            try {
-                alertStatus = AlertStatus.valueOf(keyword.toUpperCase());
-            } catch (IllegalArgumentException e) {
-                // Ignore conversion error
-            }
-        }
-
         String jpql = "SELECT a FROM Alert a WHERE " +
                 "(:keyword IS NULL OR " +
                 "LOWER(a.description) LIKE :searchPattern OR " +
                 "(:alertType IS NULL OR a.alertType = :alertType) OR " +
-                "(:status IS NULL OR a.status = :status))";
+                "(:status IS NULL OR a.status = :status)) ORDER BY a.processedDate ,a.createDate DESC";
 
         TypedQuery<Alert> query = entityManager.createQuery(jpql, Alert.class);
 
@@ -151,7 +136,11 @@ public class AlertServiceImpl implements AlertService {
 
         List<Alert> alerts = query.getResultList();
 
-        String countJpql = jpql.replace("SELECT a", "SELECT COUNT(a)");
+        String countJpql = "SELECT COUNT(a) FROM Alert a WHERE " +
+                "(:keyword IS NULL OR " +
+                "LOWER(a.description) LIKE :searchPattern OR " +
+                "(:alertType IS NULL OR a.alertType = :alertType) OR " +
+                "(:status IS NULL OR a.status = :status))";
         TypedQuery<Long> countQuery = entityManager.createQuery(countJpql, Long.class);
 
         countQuery.setParameter("keyword", StringUtils.hasText(keyword) ? keyword : null);
