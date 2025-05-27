@@ -46,6 +46,9 @@ public class AlertServiceImpl implements AlertService {
     private int timeThresholdSeconds; // Mặc định 5 phút (300 giây)
 
     private BigDecimal getAmountThreshold(CustomerType customerType) {
+        if (customerType == null) {
+            return com.bank.constant.Value.PERSONAL;
+        }
         return CustomerTypeUtils.getAlertThresholdByCustomerType(customerType);
     }
 
@@ -56,11 +59,11 @@ public class AlertServiceImpl implements AlertService {
         Date checkTime = new Date();
         LocalDateTime localCheckTime = checkTime.toInstant()
                 .atZone(ZoneId.of("Asia/Ho_Chi_Minh")).toLocalDateTime();
-        LocalDateTime startTime = localCheckTime.minusDays(1); // Kiểm tra trogn 1 ngy gần nhất
+        LocalDateTime startTime = localCheckTime.minusDays(2); // Kiểm tra trogn 1 ngy gần nhất
 
         Date startDate = Date.from(startTime.atZone(ZoneId.of("Asia/Ho_Chi_Minh")).toInstant());
 
-        List<Transaction> transactions = transactionRepository.findAllByTransactionDateBetween(startDate, checkTime);
+        List<Transaction> transactions = transactionRepository.findAllByTransactionDateBetweenWithCustomerType(startDate, checkTime);
 
         // Sử dụng Virtual Thread để xử lý danh sách giao dịch
         List<CompletableFuture<Boolean>> futures = transactions.stream()
@@ -118,7 +121,6 @@ public class AlertServiceImpl implements AlertService {
 
         return isAbnormal;
     }
-
 
     @Override
     public PaginDto<AlertResponseDto> getAlerts(PaginDto<AlertResponseDto> paginDto, String role) {

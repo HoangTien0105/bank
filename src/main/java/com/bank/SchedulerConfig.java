@@ -72,7 +72,7 @@ public class SchedulerConfig {
     }
 
     // Thêm lịch trình kiểm tra giao dịch bất thường mỗi 1 tiếng
-    @Scheduled(cron = "0 0 * * * ?")
+    @Scheduled(cron = "0 * * * * ?")
     public void detectAbnormalTransactions() {
         CompletableFuture.runAsync(() -> {
             try {

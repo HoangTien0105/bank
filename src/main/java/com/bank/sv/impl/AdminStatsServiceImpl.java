@@ -2,10 +2,7 @@ package com.bank.sv.impl;
 
 import com.bank.constant.Message;
 import com.bank.model.AdminStatistics;
-import com.bank.repository.AccountRepository;
-import com.bank.repository.AdminStatsRepository;
-import com.bank.repository.CustomerRepository;
-import com.bank.repository.TransactionRepository;
+import com.bank.repository.*;
 import com.bank.sv.AdminStatsService;
 import com.bank.utils.DateUtils;
 import com.bank.utils.ExcelUtils;
@@ -40,13 +37,15 @@ public class AdminStatsServiceImpl implements AdminStatsService {
     @Autowired
     private AccountRepository accountRepository;
 
+    @Autowired
+    private AlertRepository alertRepository;
+
     @PersistenceContext
     private EntityManager entityManager;
 
     @Override
     @Transactional
     public void generateStatisticsForDate(Date date) {
-        // Chuyển đổi Date thành LocalDateTime
         LocalDateTime localDate = date.toInstant().atZone(ZoneId.of("Asia/Ho_Chi_Minh")).toLocalDateTime().withHour(0).withMinute(0).withSecond(0).withNano(0);
 
         Optional<AdminStatistics> existingStats = adminStatsRepository.findByDate(localDate);
@@ -72,7 +71,7 @@ public class AdminStatsServiceImpl implements AdminStatsService {
         BigDecimal avgAmount = transactionRepository.getAvgAmountOfTransferByDate(startDate, endDate);
 
         // Số tiền giao dịch thấp nhất trong ngày
-        BigDecimal minAmount = transactionRepository.getAvgAmountOfTransferByDate(startDate, endDate);
+        BigDecimal minAmount = transactionRepository.getMinAmountOfTransferByDate(startDate, endDate);
 
         // Số khách hàng mới trong ngày
         Long newCustomers = customerRepository.countAllNewCustomersByDate(startDate, endDate);
@@ -87,7 +86,7 @@ public class AdminStatsServiceImpl implements AdminStatsService {
         if (totalTransactions == 0 && newCustomers == 0 && newSavingAccounts == 0) {
             // Lấy thống kê của ngày gần nhất trước đó
             LocalDateTime previousDay = localDate.minusDays(1);
-            Optional<AdminStatistics> previousStats = adminStatsRepository.findByDate(previousDay);
+            Optional<AdminStatistics> previousStats = adminStatsRepository.findTopByDateBeforeOrderByDateDesc(previousDay);
 
             if (previousStats.isPresent() && previousStats.get().getTotalCustomers().equals(totalCustomers)) {
                 return;
@@ -102,7 +101,6 @@ public class AdminStatsServiceImpl implements AdminStatsService {
     @Override
     @Cacheable(value = "admin_date_stats", key = "{#startDate, #endDate}")
     public List<AdminStatistics> getStatisticsForDateRange(Date startDate, Date endDate) {
-        // Chuyển đổi Date thành LocalDateTime
         LocalDateTime start = startDate.toInstant().atZone(ZoneId.of("Asia/Ho_Chi_Minh")).toLocalDateTime().withHour(0).withMinute(0).withSecond(0).withNano(0);
 
         LocalDateTime end = endDate.toInstant().atZone(ZoneId.of("Asia/Ho_Chi_Minh")).toLocalDateTime().withHour(23).withMinute(59).withSecond(59).withNano(999999999);
@@ -112,10 +110,24 @@ public class AdminStatsServiceImpl implements AdminStatsService {
 
     @Override
     public AdminStatistics getStatisticsForDate(Date date) {
-        // Chuyển đổi Date thành LocalDateTime
         LocalDateTime localDate = date.toInstant().atZone(ZoneId.of("Asia/Ho_Chi_Minh")).toLocalDateTime().withHour(0).withMinute(0).withSecond(0).withNano(0);
 
         return adminStatsRepository.findByDate(localDate).orElseThrow(() -> new RuntimeException("Statistic not found"));
+    }
+
+    @Override
+    public Map<String, Object> getTotalAdminStatForCurrentDate() {
+        Long totalTransactions = transactionRepository.countAllTransactions();
+        Long totalAlerts = alertRepository.totalAlerts();
+        Long totalUsers = adminStatsRepository.countAllCustomers();
+
+        Map<String, Object> result = new HashMap<>();
+
+        result.put("totalTransactions", totalTransactions);
+        result.put("totalAlerts", totalAlerts);
+        result.put("totalUsers", totalUsers);
+
+        return result;
     }
 
     @Override
@@ -364,7 +376,6 @@ public class AdminStatsServiceImpl implements AdminStatsService {
             throw new IllegalArgumentException(Message.YEAR_REQUIRED);
         }
 
-        // Chuyển đổi Date thành LocalDateTime
         LocalDateTime start = startDate.toInstant().atZone(ZoneId.of("Asia/Ho_Chi_Minh")).toLocalDateTime().withHour(0).withMinute(0).withSecond(0);
         LocalDateTime end = endDate.toInstant().atZone(ZoneId.of("Asia/Ho_Chi_Minh")).toLocalDateTime().withHour(23).withMinute(59).withSecond(59);
 

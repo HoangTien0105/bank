@@ -154,4 +154,15 @@ public class AdminStatsController {
             return ResponseEntity.badRequest().build();
         }
     }
+
+    @Operation(summary = "Get total stats")
+    @GetMapping("/total")
+    public ResponseEntity<Object> getTotalAdminStats(){
+        try {
+            Map<String, Object> response = adminStatsService.getTotalAdminStatForCurrentDate();
+            return ResponseEntity.ok().body(apiResponse.response("Retrieved data successfully", true, response));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(apiResponse.response(e.getMessage(), false, null));
+        }
+    }
 }

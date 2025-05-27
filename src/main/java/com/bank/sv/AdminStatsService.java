@@ -11,6 +11,7 @@ public interface AdminStatsService {
     List<AdminStatistics> getStatisticsForDateRange(Date startDate, Date endDate);
     AdminStatistics getStatisticsForDate(Date date);
 
+    Map<String, Object> getTotalAdminStatForCurrentDate();
     Map<String, Object> getStatisticsForWeek(Date date);
     Map<String, Object> getStatisticsForQuarter(int quarter, int year);
     Map<String, Object> getStatisticsForYear(int year);

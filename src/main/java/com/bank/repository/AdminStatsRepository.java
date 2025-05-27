@@ -13,6 +13,10 @@ import java.util.Optional;
 @Repository
 public interface AdminStatsRepository extends JpaRepository<AdminStatistics, Long> {
     Optional<AdminStatistics> findByDate(LocalDateTime date);
+    Optional<AdminStatistics> findTopByDateBeforeOrderByDateDesc(LocalDateTime date);
+
+    @Query("SELECT MAX(totalCustomers) FROM AdminStatistics")
+    Long countAllCustomers();
 
     @Query("SELECT s FROM AdminStatistics s WHERE s.date BETWEEN :startDate AND :endDate ORDER BY s.date")
     List<AdminStatistics> findByDateRange(@Param("startDate") LocalDateTime startDate, @Param("endDate") LocalDateTime endDate);
