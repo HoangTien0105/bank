@@ -73,6 +73,16 @@ public class AlertServiceImpl implements AlertService {
                         return false;
                     }
                 })).collect(Collectors.toList());
+        if (!futures.isEmpty()) {
+            try {
+                CompletableFuture<Void> allFutures = CompletableFuture.allOf(
+                        futures.toArray(new CompletableFuture[0]));
+
+                allFutures.join();
+            } catch (Exception e) {
+                System.err.println("Error waiting for transaction processing: " + e.getMessage());
+            }
+        }
     }
 
     private boolean processTransaction(Transaction transaction) {

@@ -123,7 +123,7 @@ public class CustomerStatsServiceImpl implements CustomerStatsService {
     }
 
     @Override
-    @Cacheable(value = "customers_stats", key = "#customers_stats")
+    @Cacheable(value = "customers_stats", key = "{#cusId, #startDate, #endDate}")
     public List<CustomerStatsResponseDto> getStatsForCustomer(String cusId, Date startDate, Date endDate) {
         LocalDate startLocalDate = startDate.toInstant().atZone(ZoneId.of("Asia/Ho_Chi_Minh")).toLocalDate();
         LocalDate endLocalDate = endDate.toInstant().atZone(ZoneId.of("Asia/Ho_Chi_Minh")).toLocalDate();
