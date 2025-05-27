@@ -15,6 +15,9 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.HashMap;
+import java.util.Map;
+
 @RestController
 @RequestMapping("/api/alerts")
 @Tag(name = "Alerts")
@@ -28,7 +31,9 @@ public class AlertController {
     @GetMapping
     public ResponseEntity<Object> getAlerts(@RequestParam(value = "offset", defaultValue = "0") Integer offset,
                                             @RequestParam(value = "limit", defaultValue = "10") Integer limit,
-                                            @RequestParam(value = "keyword", required = false) String keyword) {
+                                            @RequestParam(value = "keyword", required = false) String keyword,
+                                            @RequestParam(value = "type", required = false) String type,
+                                            @RequestParam(value = "status", required = false) String status) {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         JwtUser jwtUser = (JwtUser) authentication.getPrincipal();
 
@@ -36,6 +41,15 @@ public class AlertController {
         paginDto.setOffset(offset);
         paginDto.setLimit(limit);
         paginDto.setKeyword(keyword);
+
+        Map<String, Object> options = new HashMap<>();
+        if (type != null) {
+            options.put("type", type);
+        }
+        if (status != null) {
+            options.put("status", status);
+        }
+        paginDto.setOptions(options);
 
         PaginDto<AlertResponseDto> result = alertService.getAlerts(paginDto, jwtUser.getRole());
 

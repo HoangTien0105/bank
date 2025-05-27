@@ -26,6 +26,7 @@ import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.Date;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 
@@ -115,38 +116,87 @@ public class AlertServiceImpl implements AlertService {
         int limit = paginDto.getLimit() != null ? paginDto.getLimit() : 10;
         String keyword = paginDto.getKeyword();
         int pageNumber = offset / limit;
-        AlertType alertType = null;
-        AlertStatus alertStatus = null;
+        Map<String, Object> options = paginDto.getOptions();
 
-        String jpql = "SELECT a FROM Alert a WHERE " +
-                "(:keyword IS NULL OR " +
-                "LOWER(a.description) LIKE :searchPattern OR " +
-                "(:alertType IS NULL OR a.alertType = :alertType) OR " +
-                "(:status IS NULL OR a.status = :status)) ORDER BY a.processedDate ,a.createDate DESC";
+        // Build dynamic query với StringBuilder để dễ maintain
+        StringBuilder jpql = new StringBuilder("SELECT a FROM Alert a WHERE 1=1");
+        StringBuilder countJpql = new StringBuilder("SELECT COUNT(a) FROM Alert a WHERE 1=1");
 
-        TypedQuery<Alert> query = entityManager.createQuery(jpql, Alert.class);
+        if (StringUtils.hasText(keyword)) {
+            jpql.append(" AND LOWER(a.description) LIKE :searchPattern");
+            countJpql.append(" AND LOWER(a.description) LIKE :searchPattern");
+        }
 
-        query.setParameter("keyword", StringUtils.hasText(keyword) ? keyword : null);
-        query.setParameter("searchPattern", StringUtils.hasText(keyword) ? "%" + keyword.toLowerCase() + "%" : null);
-        query.setParameter("alertType", alertType);
-        query.setParameter("status", alertStatus);
+        if (options != null && options.containsKey("type")) {
+            jpql.append(" AND a.alertType = :alertType");
+            countJpql.append(" AND a.alertType = :alertType");
+        }
 
+        if (options != null && options.containsKey("status")) {
+            jpql.append(" AND a.status = :status");
+            countJpql.append(" AND a.status = :status");
+        }
+
+        jpql.append(" ORDER BY a.processedDate DESC NULLS LAST, a.createDate DESC");
+
+        TypedQuery<Alert> query = entityManager.createQuery(jpql.toString(), Alert.class);
+
+        if (StringUtils.hasText(keyword)) {
+            query.setParameter("searchPattern", "%" + keyword.toLowerCase() + "%");
+        }
+
+        if (options != null && options.containsKey("type")) {
+            String type = (String) options.get("type");
+            try {
+                AlertType alertType = AlertType.valueOf(type.toUpperCase());
+                query.setParameter("alertType", alertType);
+            } catch (IllegalArgumentException e) {
+                query.setParameter("alertType", null);
+            }
+        }
+
+        if (options != null && options.containsKey("status")) {
+            String status = (String) options.get("status");
+            try {
+                AlertStatus alertStatus = AlertStatus.valueOf(status.toUpperCase());
+                query.setParameter("status", alertStatus);
+            } catch (IllegalArgumentException e) {
+                query.setParameter("status", null);
+            }
+        }
+
+        // Pagination
         query.setFirstResult(pageNumber * limit);
         query.setMaxResults(limit);
 
         List<Alert> alerts = query.getResultList();
 
-        String countJpql = "SELECT COUNT(a) FROM Alert a WHERE " +
-                "(:keyword IS NULL OR " +
-                "LOWER(a.description) LIKE :searchPattern OR " +
-                "(:alertType IS NULL OR a.alertType = :alertType) OR " +
-                "(:status IS NULL OR a.status = :status))";
-        TypedQuery<Long> countQuery = entityManager.createQuery(countJpql, Long.class);
+        // Tạo count query
+        TypedQuery<Long> countQuery = entityManager.createQuery(countJpql.toString(), Long.class);
 
-        countQuery.setParameter("keyword", StringUtils.hasText(keyword) ? keyword : null);
-        countQuery.setParameter("searchPattern", StringUtils.hasText(keyword) ? "%" + keyword.toLowerCase() + "%" : null);
-        countQuery.setParameter("alertType", alertType);
-        countQuery.setParameter("status", alertStatus);
+        if (StringUtils.hasText(keyword)) {
+            countQuery.setParameter("searchPattern", "%" + keyword.toLowerCase() + "%");
+        }
+
+        if (options != null && options.containsKey("type")) {
+            String type = (String) options.get("type");
+            try {
+                AlertType alertType = AlertType.valueOf(type.toUpperCase());
+                countQuery.setParameter("alertType", alertType);
+            } catch (IllegalArgumentException e) {
+                countQuery.setParameter("alertType", null);
+            }
+        }
+
+        if (options != null && options.containsKey("status")) {
+            String status = (String) options.get("status");
+            try {
+                AlertStatus alertStatus = AlertStatus.valueOf(status.toUpperCase());
+                countQuery.setParameter("status", alertStatus);
+            } catch (IllegalArgumentException e) {
+                countQuery.setParameter("status", null);
+            }
+        }
 
         Long totalRows = countQuery.getSingleResult();
 
@@ -154,6 +204,7 @@ public class AlertServiceImpl implements AlertService {
                 .map(AlertResponseDto::build)
                 .collect(Collectors.toList());
 
+        // Set pagination info
         paginDto.setResults(result);
         paginDto.setOffset(offset);
         paginDto.setLimit(limit);
