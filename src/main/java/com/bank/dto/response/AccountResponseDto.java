@@ -19,6 +19,7 @@ public class AccountResponseDto {
     private Date openDate;
     private BigDecimal interestRate;
     private Date maturiryDate;
+    private String status;
     private String sourceAccount;
     private Integer savingScheduleDay;
     private BigDecimal monthlyDepositAmount;
@@ -33,6 +34,7 @@ public class AccountResponseDto {
                 .openDate(account.getCreateDate())
                 .interestRate(account.getInterestRate())
                 .maturiryDate(account.getMaturityDate())
+                .status(account.getStatus().toString())
                 .sourceAccount(account.getSourceAccount() != null ? account.getSourceAccount().getId() : null)
                 .savingScheduleDay(account.getSavingScheduleDay())
                 .monthlyDepositAmount(account.getMonthlyDepositAmount())

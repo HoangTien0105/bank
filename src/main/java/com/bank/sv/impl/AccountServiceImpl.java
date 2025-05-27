@@ -119,6 +119,10 @@ public class AccountServiceImpl implements AccountService {
             jpql.append(" AND LOWER(a.balanceType) LIKE :balanceTypePattern");
         }
 
+        if (options != null && options.containsKey("accountType")) {
+            jpql.append(" AND LOWER(a.type) LIKE :accountTypePattern");
+        }
+
         if (options != null && options.containsKey("sortBy")) {
             String sortBy = (String) options.get("sortBy");
             String sortDirection = (String) options.getOrDefault("sortDirection", "ASC");
@@ -147,6 +151,11 @@ public class AccountServiceImpl implements AccountService {
             query.setParameter("balanceTypePattern", "%" + balanceType.toLowerCase() + "%");
         }
 
+        if (options != null && options.containsKey("accountType")) {
+            String accountType = (String) options.get("accountType");
+            query.setParameter("accountTypePattern", "%" + accountType.toLowerCase() + "%");
+        }
+
         List<Account> accounts = query
                 .setFirstResult(offset)
                 .setMaxResults(limit)
@@ -169,6 +178,10 @@ public class AccountServiceImpl implements AccountService {
             countJpqlBuilder.append(" AND LOWER(a.balanceType) LIKE :balanceTypePattern");
         }
 
+        if (options != null && options.containsKey("accountType")) {
+            jpql.append(" AND LOWER(a.type) LIKE :accountTypePattern");
+        }
+
 
         TypedQuery<Long> countQuery = entityManager.createQuery(countJpqlBuilder.toString(), Long.class);
 
@@ -188,6 +201,11 @@ public class AccountServiceImpl implements AccountService {
         if (options != null && options.containsKey("balanceType")) {
             String balanceType = (String) options.get("balanceType");
             countQuery.setParameter("balanceTypePattern", "%" + balanceType.toLowerCase() + "%");
+        }
+
+        if (options != null && options.containsKey("accountType")) {
+            String accountType = (String) options.get("accountType");
+            query.setParameter("accountTypePattern", "%" + accountType.toLowerCase() + "%");
         }
 
         Long totalRows = countQuery.getSingleResult();

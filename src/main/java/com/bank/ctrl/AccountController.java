@@ -36,6 +36,7 @@ public class AccountController {
                                               @RequestParam(value = "limit", defaultValue = "10") Integer limit,
                                               @RequestParam(value = "keyword", required = false) String keyword,
                                               @RequestParam(value = "balanceType", required = false) String balanceType,
+                                              @RequestParam(value = "accountType", required = false) String accountType,
                                               @RequestParam(value = "sortBy", required = false) String sortBy,
                                               @RequestParam(value = "sortDirection", required = false, defaultValue = "ASC") String sortDirection) {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
@@ -54,6 +55,10 @@ public class AccountController {
 
         if (balanceType != null) {
             options.put("balanceType", balanceType);
+        }
+
+        if (accountType != null) {
+            options.put("accountType", accountType);
         }
 
         paginDto.setOptions(options);
