@@ -63,7 +63,6 @@ public class AccountController {
 
         paginDto.setOptions(options);
 
-
         PaginDto<AccountResponseDto> result = accountService.getAccounts(paginDto, jwtUser.getId(), jwtUser.getRole());
 
         return ResponseEntity.ok(apiResponse.response("Retrieved data successfully", true, result));
@@ -80,30 +79,10 @@ public class AccountController {
     )
     @PutMapping("{id}/status")
     public ResponseEntity<Object> updateAccountStatus(@PathVariable("id") String id, @Valid @RequestBody UpdateAccountStatusRequestDto request) {
-        try {
-            accountService.updateAccountStatus(id, request);
-        } catch (Exception e) {
-            return ResponseEntity.badRequest().body(apiResponse.response("Update account successfully", true, null));
-        }
+        accountService.updateAccountStatus(id, request);
         return ResponseEntity.ok(apiResponse.response("Update account successfully", true, null));
     }
 
-    @Operation(
-            summary = "Get accounts group by type"
-    )
-    @GetMapping("/type")
-    public ResponseEntity<Object> getAccountsGroupByType(@RequestParam(value = "offset", defaultValue = "0") Integer offset,
-                                                         @RequestParam(value = "limit", defaultValue = "10") Integer limit) {
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        JwtUser jwtUser = (JwtUser) authentication.getPrincipal();
-        PaginDto<AccountResponseDto> paginDto = new PaginDto<>();
-        paginDto.setOffset(offset);
-        paginDto.setLimit(limit);
-
-        PaginDto<AccountResponseDto> result = accountService.getAccountsGroupByType(paginDto, jwtUser.getId(), jwtUser.getRole());
-
-        return ResponseEntity.ok(apiResponse.response("Retrieved data successfully", true, result));
-    }
 
     @Operation(summary = "Create saving account")
     @PostMapping("/saving")
@@ -111,30 +90,17 @@ public class AccountController {
             @Valid @RequestBody SavingAccountRequestDto requestDto,
             Authentication authentication
     ) {
-        try {
-            JwtUser jwtUser = (JwtUser) authentication.getPrincipal();
-            AccountResponseDto account = accountService.createSavingAccount(requestDto, jwtUser.getId());
-            return ResponseEntity.ok(apiResponse.response("Create saving account successfully", true, account));
-        } catch (Exception e) {
-            return ResponseEntity
-                    .status(HttpStatus.BAD_REQUEST)
-                    .body(apiResponse.response(e.getMessage(), false, null));
-        }
+        JwtUser jwtUser = (JwtUser) authentication.getPrincipal();
+        AccountResponseDto account = accountService.createSavingAccount(requestDto, jwtUser.getId());
+        return ResponseEntity.ok(apiResponse.response("Create saving account successfully", true, account));
     }
 
     @Operation(summary = "Get tracking account by customer id")
     @GetMapping("/customer")
     public ResponseEntity<Object> getTrackingAccountByCustomerId(
-            Authentication authentication
-    ) {
-        try {
-            JwtUser jwtUser = (JwtUser) authentication.getPrincipal();
-            AccountResponseDto account = accountService.getTrackingAccountByCusId(jwtUser.getId());
-            return ResponseEntity.ok(apiResponse.response("Retrieved data successfully", true, account));
-        } catch (Exception e) {
-            return ResponseEntity
-                    .status(HttpStatus.BAD_REQUEST)
-                    .body(apiResponse.response(e.getMessage(), false, null));
-        }
+            Authentication authentication) {
+        JwtUser jwtUser = (JwtUser) authentication.getPrincipal();
+        AccountResponseDto account = accountService.getTrackingAccountByCusId(jwtUser.getId());
+        return ResponseEntity.ok(apiResponse.response("Retrieved data successfully", true, account));
     }
 }

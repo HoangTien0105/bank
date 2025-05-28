@@ -85,60 +85,28 @@ public class CustomerController {
     )
     @PostMapping
     public ResponseEntity<Object> createCustomerWithAccount(@Valid @RequestBody(required = true) CustomerAccountRequestDto request) {
-        try {
-            customerService.createCustomer(request);
-        } catch (Exception e) {
-            return ResponseEntity.badRequest().body(apiResponse.response(e.getMessage(), false, null));
-        }
+        customerService.createCustomer(request);
         return ResponseEntity.ok(apiResponse.response("Create customer with accounts successfully", true, null));
     }
 
     @PutMapping("{id}")
     public ResponseEntity<Object> updateCustomerInfo(@PathVariable String id, @Valid @RequestBody(required = true) CustomerUpdateRequestDto request) {
-        try {
-            customerService.updateCustomer(id, request);
-        } catch (Exception e) {
-            return ResponseEntity.badRequest().body(apiResponse.response(e.getMessage(), false, null));
-        }
+        customerService.updateCustomer(id, request);
         return ResponseEntity.ok(apiResponse.response("Update successfully", true, null));
     }
 
 
     @PostMapping("/customerType")
     public ResponseEntity<Object> createType(@RequestParam(value = "name") String name) {
-        try {
-            customerTypeService.createCustomerType(name);
-        } catch (Exception e) {
-            return ResponseEntity.badRequest().body(apiResponse.response(e.getMessage(), false, null));
-        }
+        customerTypeService.createCustomerType(name);
         return ResponseEntity.ok(apiResponse.response("Create type successfully", true, null));
-    }
-
-    @Operation(
-            summary = "Get customers by location"
-    )
-    @GetMapping("/place")
-    public ResponseEntity<Object> getCustomersByLocation(@RequestParam(value = "offset", defaultValue = "0") String offset,
-                                                         @RequestParam(value = "limit", defaultValue = "10") String limit,
-                                                         @RequestParam(value = "location") String location) {
-        PaginDto<CustomerLocationDto> paginDto = new PaginDto<>();
-        paginDto.setOffset(offset);
-        paginDto.setLimit(limit);
-
-        PaginDto<CustomerLocationDto> result = customerService.getCustomersByLocation(paginDto, location);
-
-        return ResponseEntity.ok(apiResponse.response("Retrieved data successfully", true, result));
     }
 
     @Operation(summary = "Search customer by name, phone or account id")
     @GetMapping("/search")
     public ResponseEntity<Object> searchCustomer(@RequestParam(value = "search") String search, Authentication authentication) {
-        try {
-            JwtUser jwtUser = (JwtUser) authentication.getPrincipal();
-            List<CustomerWithAccounResponseDto> customer = customerService.searchCustomer(search, jwtUser.getId());
-            return ResponseEntity.ok(apiResponse.response("Retrieved data successfully", true, customer));
-        } catch (Exception e) {
-            return ResponseEntity.badRequest().body(apiResponse.response("Data not found", false, null));
-        }
+        JwtUser jwtUser = (JwtUser) authentication.getPrincipal();
+        List<CustomerWithAccounResponseDto> customer = customerService.searchCustomer(search, jwtUser.getId());
+        return ResponseEntity.ok(apiResponse.response("Retrieved data successfully", true, customer));
     }
 }

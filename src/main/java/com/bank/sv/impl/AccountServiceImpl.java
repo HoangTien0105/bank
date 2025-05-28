@@ -237,96 +237,6 @@ public class AccountServiceImpl implements AccountService {
     }
 
     @Override
-    public PaginDto<AccountResponseDto> getAccountsGroupByType(PaginDto<AccountResponseDto> paginDto, String customerId, String role) {
-        int offset = paginDto.getOffset() != null ? paginDto.getOffset() : 0;
-        int limit = paginDto.getLimit() != null ? paginDto.getLimit() : 10;
-        String keyword = paginDto.getKeyword();
-        int pageNumber = offset / limit;
-
-        String jpql;
-        TypedQuery<Account> query;
-
-        if ("ADMIN".equals(role)) {
-            jpql = "SELECT a FROM Account a WHERE " +
-                    "(:keyword IS NULL OR " +
-                    "LOWER(a.status) LIKE :searchPattern OR " +
-                    "LOWER(a.type) LIKE :searchPattern) " +
-                    "ORDER BY a.type, a.balance DESC";
-
-            query = entityManager.createQuery(jpql, Account.class);
-        } else {
-            jpql = "SELECT a FROM Account a JOIN a.customer c WHERE " +
-                    "c.id = :customerId AND " +
-                    "(:keyword IS NULL OR " +
-                    "LOWER(a.status) LIKE :searchPattern OR " +
-                    "LOWER(a.type) LIKE :searchPattern) " +
-                    "ORDER BY a.type, a.balance DESC";
-
-            query = entityManager.createQuery(jpql, Account.class);
-            query.setParameter("customerId", customerId);
-        }
-
-        if (StringUtils.hasText(keyword)) {
-            String searchPattern = "%" + keyword.toLowerCase() + "%";
-            query.setParameter("keyword", keyword);
-            query.setParameter("searchPattern", searchPattern);
-        } else {
-            query.setParameter("keyword", null);
-            query.setParameter("searchPattern", null);
-        }
-
-        List<Account> accounts = query
-                .setFirstResult(offset)
-                .setMaxResults(limit)
-                .getResultList();
-
-        String countJpql;
-        TypedQuery<Long> countQuery;
-
-        if ("ADMIN".equals(role)) {
-            countJpql = "SELECT COUNT(a) FROM Account a WHERE " +
-                    "(:keyword IS NULL OR " +
-                    "LOWER(a.status) LIKE :searchPattern OR " +
-                    "LOWER(a.type) LIKE :searchPattern)";
-
-            countQuery = entityManager.createQuery(countJpql, Long.class);
-        } else {
-            countJpql = "SELECT COUNT(a) FROM Account a JOIN a.customer c WHERE " +
-                    "c.id = :customerId AND " +
-                    "(:keyword IS NULL OR " +
-                    "LOWER(a.status) LIKE :searchPattern OR " +
-                    "LOWER(a.type) LIKE :searchPattern)";
-
-            countQuery = entityManager.createQuery(countJpql, Long.class);
-            countQuery.setParameter("customerId", customerId);
-        }
-
-        if (StringUtils.hasText(keyword)) {
-            String searchPattern = "%" + keyword.toLowerCase() + "%";
-            countQuery.setParameter("keyword", keyword);
-            countQuery.setParameter("searchPattern", searchPattern);
-        } else {
-            countQuery.setParameter("keyword", null);
-            countQuery.setParameter("searchPattern", null);
-        }
-
-        Long totalRows = countQuery.getSingleResult();
-
-        List<AccountResponseDto> response = accounts.stream()
-                .map(AccountResponseDto::build)
-                .toList();
-
-        paginDto.setResults(response);
-        paginDto.setOffset(offset);
-        paginDto.setLimit(limit);
-        paginDto.setPageNumber(pageNumber + 1);
-        paginDto.setTotalRows(totalRows);
-        paginDto.setTotalPages((int) Math.ceil((double) totalRows / limit));
-
-        return paginDto;
-    }
-
-    @Override
     @Transactional
     public AccountResponseDto createSavingAccount(SavingAccountRequestDto requestDto, String customerId) {
         Customer customer = customerRepository.findById(customerId).orElseThrow(() -> new RuntimeException("Customer not found"));
@@ -335,21 +245,21 @@ public class AccountServiceImpl implements AccountService {
 
         // Validate source accounts có phải của cus k
         if (!sourceAccount.getCustomer().getId().equals(customerId)) {
-            throw new RuntimeException("Source account does not belong to customer");
+            throw new ValidationException("Source account does not belong to customer");
         }
 
         if (sourceAccount.getType() != AccountType.CHECKING || sourceAccount.getStatus() != AccountStatus.ACTIVE) {
-            throw new RuntimeException("Source account must be a checking account and active");
+            throw new ValidationException("Source account must be a checking account and active");
         }
 
         if (sourceAccount.getBalance().compareTo(requestDto.getAmount()) < 0) {
-            throw new RuntimeException("Source account balance is not enough");
+            throw new ValidationException("Source account balance is not enough");
         }
 
         InterestRateConfig rateConfig = interestRateConfigRepository.findApplicableRatesByMonths(requestDto.getTermMonths());
 
         if (rateConfig == null) {
-            throw new RuntimeException("No interest rate config match " + requestDto.getTermMonths() + " months");
+            throw new ValidationException("No interest rate config match " + requestDto.getTermMonths() + " months");
         }
 
         int depositDay = 0;

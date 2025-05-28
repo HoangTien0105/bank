@@ -66,26 +66,18 @@ public class AlertController {
     @PutMapping("{id}/status")
     public ResponseEntity<Object> updateAlertStatus(@PathVariable(value = "id") String id,
                                                     @Valid @RequestBody AlertUpdateRequest request) {
-        try {
-            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-            JwtUser jwtUser = (JwtUser) authentication.getPrincipal();
 
-            alertService.updateAlertStatus(id, request.getStatus(), jwtUser.getId(), request.getNotes());
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        JwtUser jwtUser = (JwtUser) authentication.getPrincipal();
 
-            return ResponseEntity.ok(apiResponse.response("Update alert status successfully", true, null));
-        } catch (Exception e) {
-            return ResponseEntity.badRequest().body(apiResponse.response(e.getMessage(), false, null));
-        }
+        alertService.updateAlertStatus(id, request.getStatus(), jwtUser.getId(), request.getNotes());
+        return ResponseEntity.ok(apiResponse.response("Update alert status successfully", true, null));
     }
 
     @Operation(summary = "Detect unusual transaction")
     @PostMapping
     public ResponseEntity<Object> detectAbnormalTransactions() {
-        try {
-            alertService.detectAbnormalTransactions();
-            return ResponseEntity.ok(apiResponse.response("Complete detection successfully", true, null));
-        } catch (Exception e) {
-            return ResponseEntity.badRequest().body(apiResponse.response(e.getMessage(), false, null));
-        }
+        alertService.detectAbnormalTransactions();
+        return ResponseEntity.ok(apiResponse.response("Complete detection successfully", true, null));
     }
 }

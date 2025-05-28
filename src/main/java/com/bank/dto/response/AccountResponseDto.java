@@ -24,7 +24,7 @@ public class AccountResponseDto {
     private Integer savingScheduleDay;
     private BigDecimal monthlyDepositAmount;
 
-    public static AccountResponseDto build(Account account){
+    public static AccountResponseDto build(Account account) {
         return builder()
                 .id(account.getId())
                 .accountType(account.getType().toString())

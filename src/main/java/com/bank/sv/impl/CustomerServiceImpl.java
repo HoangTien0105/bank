@@ -26,7 +26,6 @@ import jakarta.persistence.TypedQuery;
 import jakarta.validation.ValidationException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.cache.annotation.Cacheable;
-import org.springframework.dao.DuplicateKeyException;
 import org.springframework.data.domain.Page;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -174,13 +173,13 @@ public class CustomerServiceImpl implements CustomerService {
             throw new ValidationException(Message.INVALID_PASSWORD);
         }
         if (customerRepository.existsByEmail(registerRequestDto.getEmail()) != null) {
-            throw new DuplicateKeyException(Message.DUPLICATED_EMAIL);
+            throw new ValidationException(Message.DUPLICATED_EMAIL);
         }
         if (customerRepository.existsByCitizenId(registerRequestDto.getCitizenId()) != null) {
-            throw new DuplicateKeyException(Message.DUPLICATED_CITIZEN);
+            throw new ValidationException(Message.DUPLICATED_CITIZEN);
         }
         if (customerRepository.existsByPhone(registerRequestDto.getPhone()) != null) {
-            throw new DuplicateKeyException(Message.DUPLICATED_PHONE);
+            throw new ValidationException(Message.DUPLICATED_PHONE);
         }
 
         CustomerType customerType = customerTypeRepository.existsByName(Value.TEMPORARY_TYPE);
@@ -256,15 +255,15 @@ public class CustomerServiceImpl implements CustomerService {
         }
 
         if (customerRepository.existsByEmail(request.getEmail()) != null) {
-            throw new DuplicateKeyException(Message.DUPLICATED_EMAIL);
+            throw new ValidationException(Message.DUPLICATED_EMAIL);
         }
 
         if (customerRepository.existsByCitizenId(request.getCitizenId()) != null) {
-            throw new DuplicateKeyException(Message.DUPLICATED_CITIZEN);
+            throw new ValidationException(Message.DUPLICATED_CITIZEN);
         }
 
         if (customerRepository.existsByPhone(request.getPhone()) != null) {
-            throw new DuplicateKeyException(Message.DUPLICATED_PHONE);
+            throw new ValidationException(Message.DUPLICATED_PHONE);
         }
 
         CustomerType customerType = customerTypeRepository.existsByName(request.getCustomerType());
@@ -305,21 +304,21 @@ public class CustomerServiceImpl implements CustomerService {
 
         if (StringUtils.hasText(request.getEmail()) && !request.getEmail().equals(customer.getEmail())) {
             if (customerRepository.existsByEmail(request.getEmail()) != null) {
-                throw new DuplicateKeyException(Message.DUPLICATED_EMAIL);
+                throw new ValidationException(Message.DUPLICATED_EMAIL);
             }
             customer.setEmail(request.getEmail());
         }
 
         if (StringUtils.hasText(request.getPhone()) && !request.getPhone().equals(customer.getPhone())) {
             if (customerRepository.existsByPhone(request.getPhone()) != null) {
-                throw new DuplicateKeyException(Message.DUPLICATED_PHONE);
+                throw new ValidationException(Message.DUPLICATED_PHONE);
             }
             customer.setPhone(request.getPhone());
         }
 
         if (StringUtils.hasText(request.getCitizenId()) && !request.getCitizenId().equals(customer.getCitizenId())) {
             if (customerRepository.existsByCitizenId(request.getCitizenId()) != null) {
-                throw new DuplicateKeyException(Message.DUPLICATED_CITIZEN);
+                throw new ValidationException(Message.DUPLICATED_CITIZEN);
             }
             customer.setCitizenId(request.getCitizenId());
         }

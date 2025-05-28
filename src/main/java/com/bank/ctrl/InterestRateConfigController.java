@@ -29,19 +29,14 @@ public class InterestRateConfigController {
                                                     @RequestParam(value = "months") Integer months,
                                                     @RequestParam(value = "annualRate") Double annualRate,
                                                     @RequestParam(value = "monthlyDeposit", required = false) Double monthlyDeposit) {
-        BigDecimal expectedAmount = interestRateConfigService.calculateInterest(principal,months,annualRate,monthlyDeposit);
+        BigDecimal expectedAmount = interestRateConfigService.calculateInterest(principal, months, annualRate, monthlyDeposit);
         return ResponseEntity.ok(apiResponse.response("Retrieved successfully", true, expectedAmount));
-    }
+    }   
 
     @GetMapping
     public ResponseEntity<Object> getAllRates() {
-        try {
-            List<InterestRateConfig> rates = interestRateConfigService.getAllActiveRates();
-            return ResponseEntity.ok(apiResponse.response("Retrieved successfully", true, rates));
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                    .body(apiResponse.response("Rates not found", false, null));
-        }
+        List<InterestRateConfig> rates = interestRateConfigService.getAllActiveRates();
+        return ResponseEntity.ok(apiResponse.response("Retrieved successfully", true, rates));
     }
 
     @PostMapping

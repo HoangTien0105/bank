@@ -42,7 +42,7 @@ public class AuthController {
     private APIResponse apiResponse;
 
     @PostMapping("/login")
-    public ResponseEntity<Object> login(@Valid @RequestBody LoginRequestDto requestDto){
+    public ResponseEntity<Object> login(@Valid @RequestBody LoginRequestDto requestDto) {
         try {
             Authentication authentication = authenticationManager.authenticate(
                     new UsernamePasswordAuthenticationToken(
@@ -65,7 +65,7 @@ public class AuthController {
     }
 
     @GetMapping("/me")
-    public ResponseEntity<Object> getCurrentUser(Authentication authentication){
+    public ResponseEntity<Object> getCurrentUser(Authentication authentication) {
         JwtUser userDetails = (JwtUser) authentication.getPrincipal();
         // Kiểm tra nếu là ADMIN
         if ("admin".equals(userDetails.getId())) {
@@ -78,7 +78,7 @@ public class AuthController {
     }
 
     @PostMapping("/logout")
-    public ResponseEntity<Object> logout(Authentication authentication){
+    public ResponseEntity<Object> logout(Authentication authentication) {
         UserDetails userDetails = (UserDetails) authentication.getPrincipal();
         tokenService.deleteByCustomerById(userDetails.getUsername());
         return ResponseEntity.ok(apiResponse.response("Logout successful", true, null));
@@ -87,17 +87,13 @@ public class AuthController {
     @Operation(summary = "Register new customer with TEMPORARY type")
     @PostMapping("/register")
     public ResponseEntity<Object> register(@Valid @RequestBody RegisterRequestDto request) {
-        try {
-            customerService.register(request);
-            return ResponseEntity.ok(apiResponse.response("Registration successful", true, null));
-        } catch (Exception e) {
-            return ResponseEntity.badRequest().body(apiResponse.response(e.getMessage(), false, null));
-        }
+        customerService.register(request);
+        return ResponseEntity.ok(apiResponse.response("Registration successful", true, null));
     }
 
     @Operation(summary = "Refresh access token if refresh token is still valid")
     @PostMapping("/refreshToken")
-    public ResponseEntity<Object> refreshToken(HttpServletRequest request){
+    public ResponseEntity<Object> refreshToken(HttpServletRequest request) {
         String refreshToken = tokenService.extractRefreshTokenFromRequest(request);
         if (refreshToken == null) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)

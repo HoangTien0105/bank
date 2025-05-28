@@ -130,7 +130,6 @@ public class AlertServiceImpl implements AlertService {
         int pageNumber = offset / limit;
         Map<String, Object> options = paginDto.getOptions();
 
-        // Build dynamic query với StringBuilder để dễ maintain
         StringBuilder jpql = new StringBuilder("SELECT a FROM Alert a WHERE 1=1");
         StringBuilder countJpql = new StringBuilder("SELECT COUNT(a) FROM Alert a WHERE 1=1");
 
@@ -162,7 +161,7 @@ public class AlertServiceImpl implements AlertService {
             try {
                 AlertType alertType = AlertType.valueOf(type.toUpperCase());
                 query.setParameter("alertType", alertType);
-            } catch (IllegalArgumentException e) {
+            } catch (RuntimeException e) {
                 query.setParameter("alertType", null);
             }
         }
@@ -172,7 +171,7 @@ public class AlertServiceImpl implements AlertService {
             try {
                 AlertStatus alertStatus = AlertStatus.valueOf(status.toUpperCase());
                 query.setParameter("status", alertStatus);
-            } catch (IllegalArgumentException e) {
+            } catch (RuntimeException e) {
                 query.setParameter("status", null);
             }
         }
@@ -195,7 +194,7 @@ public class AlertServiceImpl implements AlertService {
             try {
                 AlertType alertType = AlertType.valueOf(type.toUpperCase());
                 countQuery.setParameter("alertType", alertType);
-            } catch (IllegalArgumentException e) {
+            } catch (RuntimeException e) {
                 countQuery.setParameter("alertType", null);
             }
         }
@@ -287,7 +286,7 @@ public class AlertServiceImpl implements AlertService {
     }
 
     @Async
-    public void checkAndCreateAlertWithoutBlocking(Transaction transaction) {
+    public void checkAndCreateAlert(Transaction transaction) {
         try {
             isTransactionAbnormal(transaction);
         } catch (Exception e) {

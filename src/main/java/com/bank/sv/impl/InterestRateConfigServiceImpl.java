@@ -93,7 +93,6 @@ public class InterestRateConfigServiceImpl implements InterestRateConfigService 
             throw new RuntimeException("No subscriptions found within " + months + " months");
         }
 
-        //Trả về cái có lãi suất cao nhất để thuyết phục khách hàng
         return rates.get(0).getInterestRate();
     }
 

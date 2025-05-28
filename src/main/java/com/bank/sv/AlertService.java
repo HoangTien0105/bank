@@ -10,5 +10,5 @@ public interface AlertService {
     AlertResponseDto getAlertById(String id);
     void updateAlertStatus(String id, String status, String processedBy, String notes);
     void isTransactionAbnormal(Transaction transaction);
-    void checkAndCreateAlertWithoutBlocking(Transaction transaction);
+    void checkAndCreateAlert(Transaction transaction);
 }

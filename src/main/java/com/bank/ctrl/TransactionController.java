@@ -79,42 +79,33 @@ public class TransactionController {
     @Operation(summary = "Transfer money")
     @PostMapping(value = "/transfer")
     public ResponseEntity<Object> transferMoney(@Valid @RequestBody MoneyTransferRequestDto request) {
-        try {
-            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-            JwtUser jwtUser = (JwtUser) authentication.getPrincipal();
-            TransactionResponseDto transaction = transactionService.transferMoney(request, jwtUser.getId());
 
-            return ResponseEntity.ok(apiResponse.response("Transfer money successfully", true, transaction));
-        } catch (Exception e) {
-            return ResponseEntity.badRequest().body(apiResponse.response(e.getMessage(), false, null));
-        }
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        JwtUser jwtUser = (JwtUser) authentication.getPrincipal();
+        TransactionResponseDto transaction = transactionService.transferMoney(request, jwtUser.getId());
+
+        return ResponseEntity.ok(apiResponse.response("Transfer money successfully", true, transaction));
     }
 
     @Operation(summary = "Deposit money")
     @PostMapping(value = "/deposit")
     public ResponseEntity<Object> depositMoney(@Valid @RequestBody MoneyUpdateRequest request) {
-        try {
-            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-            JwtUser jwtUser = (JwtUser) authentication.getPrincipal();
-            TransactionResponseDto transaction = transactionService.depositMoney(request, jwtUser.getId());
 
-            return ResponseEntity.ok(apiResponse.response("Deposit money successfully", true, transaction));
-        } catch (Exception e) {
-            return ResponseEntity.badRequest().body(apiResponse.response(e.getMessage(), false, null));
-        }
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        JwtUser jwtUser = (JwtUser) authentication.getPrincipal();
+        TransactionResponseDto transaction = transactionService.depositMoney(request, jwtUser.getId());
+
+        return ResponseEntity.ok(apiResponse.response("Deposit money successfully", true, transaction));
     }
 
     @Operation(summary = "Withdraw money")
     @PostMapping(value = "/withdraw")
     public ResponseEntity<Object> withdrawMoney(@Valid @RequestBody MoneyUpdateRequest request) {
-        try {
-            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-            JwtUser jwtUser = (JwtUser) authentication.getPrincipal();
-            TransactionResponseDto transaction = transactionService.withdrawMoney(request, jwtUser.getId());
-            return ResponseEntity.ok(apiResponse.response("Withdraw money successfully", true, transaction));
-        } catch (Exception e) {
-            return ResponseEntity.badRequest().body(apiResponse.response(e.getMessage(), false, null));
-        }
+
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        JwtUser jwtUser = (JwtUser) authentication.getPrincipal();
+        TransactionResponseDto transaction = transactionService.withdrawMoney(request, jwtUser.getId());
+        return ResponseEntity.ok(apiResponse.response("Withdraw money successfully", true, transaction));
     }
 
     @Operation(summary = "Get transactions by date")

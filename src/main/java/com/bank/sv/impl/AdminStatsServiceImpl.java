@@ -84,7 +84,6 @@ public class AdminStatsServiceImpl implements AdminStatsService {
 
         // Kiểm tra nếu không có hoạt động gì trong ngày
         if (totalTransactions == 0 && newCustomers == 0 && newSavingAccounts == 0) {
-            // Lấy thống kê của ngày gần nhất trước đó
             LocalDateTime previousDay = localDate.minusDays(1);
             Optional<AdminStatistics> previousStats = adminStatsRepository.findTopByDateBeforeOrderByDateDesc(previousDay);
 
@@ -102,9 +101,7 @@ public class AdminStatsServiceImpl implements AdminStatsService {
     @Cacheable(value = "admin_date_stats", key = "{#startDate, #endDate}")
     public List<AdminStatistics> getStatisticsForDateRange(Date startDate, Date endDate) {
         LocalDateTime start = startDate.toInstant().atZone(ZoneId.of("Asia/Ho_Chi_Minh")).toLocalDateTime().withHour(0).withMinute(0).withSecond(0).withNano(0);
-
         LocalDateTime end = endDate.toInstant().atZone(ZoneId.of("Asia/Ho_Chi_Minh")).toLocalDateTime().withHour(23).withMinute(59).withSecond(59).withNano(999999999);
-
         return adminStatsRepository.findByDateRange(start, end);
     }
 
@@ -211,7 +208,7 @@ public class AdminStatsServiceImpl implements AdminStatsService {
     @Cacheable(value = "admin_quarter_stats", key = "{#quarter, #year}")
     public Map<String, Object> getStatisticsForQuarter(int quarter, int year) {
         if (quarter < 1 || quarter > 4) {
-            throw new IllegalArgumentException(Message.QUARTER_INVALID);
+            throw new RuntimeException(Message.QUARTER_INVALID);
         }
 
         // Tính toán tháng bắt đầu và kết thúc của quý
@@ -369,11 +366,11 @@ public class AdminStatsServiceImpl implements AdminStatsService {
     @Override
     public byte[] exportDailyStatsToExcel(Date startDate, Date endDate) {
         if (startDate == null || endDate == null) {
-            throw new IllegalArgumentException(Message.START_END_REQUIRED);
+            throw new RuntimeException(Message.START_END_REQUIRED);
         }
 
         if (startDate.after(endDate)) {
-            throw new IllegalArgumentException(Message.YEAR_REQUIRED);
+            throw new RuntimeException(Message.YEAR_REQUIRED);
         }
 
         LocalDateTime start = startDate.toInstant().atZone(ZoneId.of("Asia/Ho_Chi_Minh")).toLocalDateTime().withHour(0).withMinute(0).withSecond(0);

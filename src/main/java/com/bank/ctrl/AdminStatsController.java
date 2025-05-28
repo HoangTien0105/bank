@@ -30,11 +30,7 @@ public class AdminStatsController {
     @PostMapping("/generate")
     public ResponseEntity<Object> generateStatistics(
             @RequestParam("date") @DateTimeFormat(pattern = "dd-MM-yyyy") Date date) {
-        try {
-            adminStatsService.generateStatisticsForDate(date);
-        } catch (Exception e) {
-            return ResponseEntity.badRequest().body(apiResponse.response("Admin statistics generated failed", false, null));
-        }
+        adminStatsService.generateStatisticsForDate(date);
         return ResponseEntity.ok(apiResponse.response("Admin statistics generated successfully", true, null));
     }
 
@@ -51,24 +47,16 @@ public class AdminStatsController {
     @GetMapping("/date")
     public ResponseEntity<Object> getStatisticsForDate(
             @RequestParam("date") @DateTimeFormat(pattern = "dd-MM-yyyy") Date date) {
-        try {
-            AdminStatistics adminStatistics = adminStatsService.getStatisticsForDate(date);
-            return ResponseEntity.ok(apiResponse.response("Admin statistics retrieved successfully", true, adminStatistics));
-        } catch (Exception e) {
-            return ResponseEntity.badRequest().body(apiResponse.response(e.getMessage(), false, null));
-        }
+        AdminStatistics adminStatistics = adminStatsService.getStatisticsForDate(date);
+        return ResponseEntity.ok(apiResponse.response("Admin statistics retrieved successfully", true, adminStatistics));
     }
 
     @Operation(summary = "Get statistics for a week")
     @GetMapping("/week")
     public ResponseEntity<Object> getStatisticsForWeek(
             @RequestParam("date") @DateTimeFormat(pattern = "dd-MM-yyyy") Date date) {
-        try {
-            Map<String, Object> weeklyStats = adminStatsService.getStatisticsForWeek(date);
-            return ResponseEntity.ok(apiResponse.response("Weekly statistics retrieved successfully", true, weeklyStats));
-        } catch (Exception e) {
-            return ResponseEntity.badRequest().body(apiResponse.response(e.getMessage(), false, null));
-        }
+        Map<String, Object> weeklyStats = adminStatsService.getStatisticsForWeek(date);
+        return ResponseEntity.ok(apiResponse.response("Weekly statistics retrieved successfully", true, weeklyStats));
     }
 
     @Operation(summary = "Get statistics for a quarter")
@@ -76,24 +64,17 @@ public class AdminStatsController {
     public ResponseEntity<Object> getStatisticsForQuarter(
             @RequestParam("quarter") int quarter,
             @RequestParam("year") int year) {
-        try {
-            Map<String, Object> quarterlyStats = adminStatsService.getStatisticsForQuarter(quarter, year);
-            return ResponseEntity.ok(apiResponse.response("Quarterly statistics retrieved successfully", true, quarterlyStats));
-        } catch (Exception e) {
-            return ResponseEntity.badRequest().body(apiResponse.response(e.getMessage(), false, null));
-        }
+
+        Map<String, Object> quarterlyStats = adminStatsService.getStatisticsForQuarter(quarter, year);
+        return ResponseEntity.ok(apiResponse.response("Quarterly statistics retrieved successfully", true, quarterlyStats));
     }
 
     @Operation(summary = "Get statistics for a year")
     @GetMapping("/year")
     public ResponseEntity<Object> getStatisticsForYear(
             @RequestParam("year") int year) {
-        try {
-            Map<String, Object> yearlyStats = adminStatsService.getStatisticsForYear(year);
-            return ResponseEntity.ok(apiResponse.response("Yearly statistics retrieved successfully", true, yearlyStats));
-        } catch (Exception e) {
-            return ResponseEntity.badRequest().body(apiResponse.response(e.getMessage(), false, null));
-        }
+        Map<String, Object> yearlyStats = adminStatsService.getStatisticsForYear(year);
+        return ResponseEntity.ok(apiResponse.response("Yearly statistics retrieved successfully", true, yearlyStats));
     }
 
     @Operation(summary = "Export daily statistics to Excel")
@@ -101,68 +82,49 @@ public class AdminStatsController {
     public ResponseEntity<byte[]> exportDailyStats(
             @RequestParam @DateTimeFormat(pattern = "dd-MM-yyyy") Date startDate,
             @RequestParam @DateTimeFormat(pattern = "dd-MM-yyyy") Date endDate) {
-        try {
-            byte[] excelFile = adminStatsService.exportDailyStatsToExcel(startDate, endDate);
-            return ResponseEntity.ok()
-                    .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=daily_stats.xlsx")
-                    .contentType(MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
-                    .body(excelFile);
-        } catch (Exception e) {
-            return ResponseEntity.badRequest().build();
-        }
+        byte[] excelFile = adminStatsService.exportDailyStatsToExcel(startDate, endDate);
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=daily_stats.xlsx")
+                .contentType(MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
+                .body(excelFile);
     }
 
     @Operation(summary = "Export weekly statistics to Excel")
     @GetMapping("/export/weekly/{year}")
     public ResponseEntity<byte[]> exportWeeklyStats(@PathVariable int year) {
-        try {
-            byte[] excelFile = adminStatsService.exportWeeklyStatsToExcel(year);
-            return ResponseEntity.ok()
-                    .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=weekly_stats.xlsx")
-                    .contentType(MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
-                    .body(excelFile);
-        } catch (Exception e) {
-            return ResponseEntity.badRequest().build();
-        }
+        byte[] excelFile = adminStatsService.exportWeeklyStatsToExcel(year);
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=weekly_stats.xlsx")
+                .contentType(MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
+                .body(excelFile);
     }
 
     @Operation(summary = "Export quarterly statistics to Excel")
     @GetMapping("/export/quarterly/{year}")
     public ResponseEntity<byte[]> exportQuarterlyStats(@PathVariable int year) {
-        try {
-            byte[] excelFile = adminStatsService.exportQuarterlyStatsToExcel(year);
-            return ResponseEntity.ok()
-                    .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=quarterly_stats.xlsx")
-                    .contentType(MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
-                    .body(excelFile);
-        } catch (Exception e) {
-            return ResponseEntity.badRequest().build();
-        }
+        byte[] excelFile = adminStatsService.exportQuarterlyStatsToExcel(year);
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=quarterly_stats.xlsx")
+                .contentType(MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
+                .body(excelFile);
     }
 
     @Operation(summary = "Export yearly statistics to Excel")
     @GetMapping("/export/yearly")
     public ResponseEntity<byte[]> exportYearlyStats(
             @RequestParam int year) {
-        try {
-            byte[] excelFile = adminStatsService.exportYearlyStatsToExcel(year);
-            return ResponseEntity.ok()
-                    .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=yearly_stats.xlsx")
-                    .contentType(MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
-                    .body(excelFile);
-        } catch (Exception e) {
-            return ResponseEntity.badRequest().build();
-        }
+        byte[] excelFile = adminStatsService.exportYearlyStatsToExcel(year);
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=yearly_stats.xlsx")
+                .contentType(MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
+                .body(excelFile);
+
     }
 
     @Operation(summary = "Get total stats")
     @GetMapping("/total")
-    public ResponseEntity<Object> getTotalAdminStats(){
-        try {
-            Map<String, Object> response = adminStatsService.getTotalAdminStatForCurrentDate();
-            return ResponseEntity.ok().body(apiResponse.response("Retrieved data successfully", true, response));
-        } catch (Exception e) {
-            return ResponseEntity.badRequest().body(apiResponse.response(e.getMessage(), false, null));
-        }
+    public ResponseEntity<Object> getTotalAdminStats() {
+        Map<String, Object> response = adminStatsService.getTotalAdminStatForCurrentDate();
+        return ResponseEntity.ok().body(apiResponse.response("Retrieved data successfully", true, response));
     }
 }
